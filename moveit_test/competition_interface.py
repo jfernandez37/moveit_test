@@ -42,7 +42,7 @@ class CompetitionInterface(Node):
         # Moveit_py variables
         self._aprs_robots = MoveItPy(node_name="aprs_robots_moveit_py")
 
-        self._ur_robot : PlanningComponent = self._aprs_robots.get_planning_component("aprs_ur")
+        self._fanuc_robot : PlanningComponent = self._aprs_robots.get_planning_component("aprs_fanuc")
         self._planning_scene_monitor : PlanningSceneMonitor = self._aprs_robots.get_planning_scene_monitor()
     
     def _plan_and_execute(
@@ -77,14 +77,7 @@ class CompetitionInterface(Node):
             return False
         return True
     
-    def move_ur_home(self):
-        with self._planning_scene_monitor.read_write() as scene:
-            self._ur_robot.set_start_state(robot_state = scene.current_state)
-            self._ur_robot.set_goal_state(configuration_name="home")
-
-        self._plan_and_execute(self._aprs_robots,self._ur_robot, self.get_logger())
-    
-    def move_ur_random(self):
+    def move_fanuc_random(self):
         robot_model = self._aprs_robots.get_robot_model()
         robot_state = RobotState(robot_model)
 
@@ -92,11 +85,29 @@ class CompetitionInterface(Node):
         robot_state.set_to_random_positions()
 
         # set plan start state to current state
-        self._ur_robot.set_start_state_to_current_state()
+        self._fanuc_robot.set_start_state_to_current_state()
 
         # set goal state to the initialized robot state
         self.get_logger().info("Set goal state to the initialized robot state")
-        self._ur_robot.set_goal_state(robot_state=robot_state)
+        with self._planning_scene_monitor.read_write() as scene:
+            self._fanuc_robot.set_goal_state(robot_state=scene.current_state)
 
         # plan to goal
-        self._plan_and_execute(self._aprs_robots,self._ur_robot, self.get_logger())
+        self._plan_and_execute(self._aprs_robots, self._fanuc_robot, self.get_logger(), sleep_time=3.0)
+    
+    def move_fanuc_random(self):
+        robot_model = self._aprs_robots.get_robot_model()
+        robot_state = RobotState(robot_model)
+
+        # randomize the robot state
+        robot_state.set_to_random_positions()
+
+        # set plan start state to current state
+        self._fanuc_robot.set_start_state_to_current_state()
+
+        # set goal state to the initialized robot state
+        self.get_logger().info("Set goal state to the initialized robot state")
+        self._fanuc_robot.set_goal_state(robot_state=robot_state)
+
+        # plan to goal
+        self._plan_and_execute(self._aprs_robots,self._fanuc_robot, self.get_logger())
