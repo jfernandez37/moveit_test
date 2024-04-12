@@ -18,9 +18,10 @@ def main(args=None):
 
     spin_thread = threading.Thread(target=executor.spin)
     spin_thread.start()
+    sleep(10)
     while True:
-        interface.move_fanuc_random()
-        sleep(10)
+        interface.small_movement()
+        
     interface.destroy_node()
     rclpy.shutdown()
 
