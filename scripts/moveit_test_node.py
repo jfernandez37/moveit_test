@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-'''
-To test this script, run the following commands in separate terminals:
-- ros2 launch ariac_gazebo ariac.launch.py trial_name:=tutorial competitor_pkg:=ariac_tutorials
-- ros2 run ariac_tutorials tutorial_10.py
-'''
+
 import threading
 import rclpy
 from moveit_test.competition_interface import CompetitionInterface
@@ -20,8 +16,13 @@ def main(args=None):
     spin_thread.start()
     sleep(10)
     while True:
-        interface.small_movement()
-        
+        interface.small_movement("franka")
+        sleep(5)
+        # sleep(100)
+        # for robot in ["ur","fanuc", "franka", "motoman"]:
+        #     interface.small_movement(robot=robot)
+        # sleep(5)
+    
     interface.destroy_node()
     rclpy.shutdown()
 

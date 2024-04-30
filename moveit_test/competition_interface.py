@@ -55,6 +55,23 @@ class CompetitionInterface(Node):
         self._aprs_robots = MoveItPy(node_name="aprs_robots_moveit_py")
 
         self._ur_robot : PlanningComponent = self._aprs_robots.get_planning_component("aprs_ur")
+        self._fanuc_robot : PlanningComponent = self._aprs_robots.get_planning_component("aprs_fanuc")
+        self._franka_robot : PlanningComponent = self._aprs_robots.get_planning_component("aprs_franka")
+        self._motoman_robot : PlanningComponent = self._aprs_robots.get_planning_component("aprs_motoman")
+        self._robot_info = {
+            "ur":{"planning_component":self._ur_robot,
+                  "end_link": "wrist_3_link",
+                  "group_name": "aprs_ur"},
+            "fanuc":{"planning_component":self._fanuc_robot,
+                  "end_link": "link_6",
+                  "group_name": "aprs_fanuc"},
+            "franka":{"planning_component":self._franka_robot,
+                  "end_link": "fr3_hand_tcp",
+                  "group_name": "aprs_franka"},
+            "motoman":{"planning_component":self._motoman_robot,
+                  "end_link": "link_t",
+                  "group_name": "aprs_motoman"}
+        }
         self._planning_scene_monitor : PlanningSceneMonitor = self._aprs_robots.get_planning_scene_monitor()
         
         self.get_cartesian_path_client = self.create_client(GetCartesianPath, "compute_cartesian_path")
@@ -62,8 +79,8 @@ class CompetitionInterface(Node):
     def _call_get_cartesian_path(self, waypoints : list, 
                                   max_velocity_scaling_factor : float, 
                                   max_acceleration_scaling_factor : float,
-                                  avoid_collision : bool
-                                  ):
+                                  avoid_collision : bool,
+                                  robot : str = "ur"):
 
         self.get_logger().info("Getting cartesian path")
 
@@ -77,8 +94,8 @@ class CompetitionInterface(Node):
         with self._planning_scene_monitor.read_write() as scene:
             request.start_state = robotStateToRobotStateMsg(scene.current_state)
 
-        request.group_name = "aprs_ur"
-        request.link_name = "wrist_3_link"
+        request.group_name = self._robot_info[robot]["group_name"]
+        request.link_name = self._robot_info[robot]["end_link"]
         
         request.waypoints = waypoints
         request.max_step = 0.1
@@ -100,13 +117,13 @@ class CompetitionInterface(Node):
         self.get_logger().info("Returning cartesian path")
         return result.solution
     
-    def _move_ur_cartesian(self, waypoints, velocity, acceleration, avoid_collision = True):
-        trajectory_msg = self._call_get_cartesian_path(waypoints, velocity, acceleration, avoid_collision)
+    def _move_robot_cartesian(self, waypoints, velocity, acceleration, avoid_collision = True, robot = "ur"):
+        trajectory_msg = self._call_get_cartesian_path(waypoints, velocity, acceleration, avoid_collision, robot)
         with self._planning_scene_monitor.read_write() as scene:
 
             trajectory = RobotTrajectory(self._aprs_robots.get_robot_model())
             trajectory.set_robot_trajectory_msg(scene.current_state, trajectory_msg)
-            trajectory.joint_model_group_name = "aprs_ur"
+            trajectory.joint_model_group_name = self._robot_info[robot]["group_name"]
 
             trajectory_msg: RobotTrajectoryMsg
             point : JointTrajectoryPoint
@@ -148,8 +165,8 @@ class CompetitionInterface(Node):
             logger.error("Planning failed")
             return False
         return True
-    
-    def move_ur_random(self):
+
+    def move_robot_random(self, robot="ur"):
         robot_model = self._aprs_robots.get_robot_model()
         robot_state = RobotState(robot_model)
 
@@ -157,60 +174,32 @@ class CompetitionInterface(Node):
         robot_state.set_to_random_positions()
 
         # set plan start state to current state
-        self._ur_robot.set_start_state_to_current_state()
-
-        # set goal state to the initialized robot state
-        self.get_logger().info("Set goal state to the initialized robot state")
         with self._planning_scene_monitor.read_write() as scene:
-            self._ur_robot.set_goal_state(robot_state=scene.current_state)
+            self._robot_info[robot]["planning_component"].set_start_state(robot_state = scene.current_state)
+            scene.current_state.set_to_random_positions()
+            self._robot_info[robot]["planning_component"].set_goal_state(robot_state=scene.current_state)
 
         # plan to goal
-        self._plan_and_execute(self._aprs_robots, self._ur_robot, self.get_logger(), sleep_time=3.0)
-    
-    def move_ur_random(self):
-        robot_model = self._aprs_robots.get_robot_model()
-        robot_state = RobotState(robot_model)
-
-        # randomize the robot state
-        robot_state.set_to_random_positions()
-
-        # set plan start state to current state
-        self._ur_robot.set_start_state_to_current_state()
-
-        # set goal state to the initialized robot state
-        self.get_logger().info("Set goal state to the initialized robot state")
-        self._ur_robot.set_goal_state(robot_state=robot_state)
-
-        # plan to goal
-        self._plan_and_execute(self._aprs_robots,self._ur_robot, self.get_logger())
+        self._plan_and_execute(self._aprs_robots,self._robot_info[robot]["planning_component"], self.get_logger())
         
-    def small_movement(self):
+    def small_movement(self, robot="ur"):
         with self._planning_scene_monitor.read_write() as scene:
-            current_pose = scene.current_state.get_pose("wrist_3_link")
+            current_pose = scene.current_state.get_pose(self._robot_info[robot]["end_link"])
         self.print_pose(current_pose)
         current_pose : Pose
         goal_pose = build_pose(current_pose.position.x, current_pose.position.y,
-                               current_pose.position.z - 0.3, current_pose.orientation)
+                               current_pose.position.z + 0.1, current_pose.orientation)
         self.print_pose(goal_pose)
-        self._move_ur_cartesian([current_pose,goal_pose], 0.3,0.3, False)
+        self._move_robot_cartesian([current_pose,goal_pose], 0.3,0.3, False,robot)
     
     def print_pose(self, pose : Pose):
         self.get_logger().info(f"x: {pose.position.x}\ty: {pose.position.y}\tz: {pose.position.z}\t")
     
-    def move_ur_home(self):
+    def move_robot_named_position(self, position_name : str, robot : str="ur"):
         
         # Set the start state and goal state for the robot
         with self._planning_scene_monitor.read_write() as scene:
-            self._ur_robot.set_start_state(robot_state = scene.current_state)
-            self._ur_robot.set_goal_state(configuration_name="home")
+            self._robot_info[robot]["planning_component"].set_start_state(robot_state = scene.current_state)
+            self._robot_info[robot]["planning_component"].set_goal_state(configuration_name=position_name)
 
-        self._plan_and_execute(self._aprs_robots,self._ur_robot, self.get_logger())
-        
-    def move_ur_up(self):
-        
-        # Set the start state and goal state for the robot
-        with self._planning_scene_monitor.read_write() as scene:
-            self._ur_robot.set_start_state(robot_state = scene.current_state)
-            self._ur_robot.set_goal_state(configuration_name="up")
-
-        self._plan_and_execute(self._aprs_robots,self._ur_robot, self.get_logger())        
+        self._plan_and_execute(self._aprs_robots,self._robot_info[robot]["planning_component"], self.get_logger())
