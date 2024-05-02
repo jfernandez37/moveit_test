@@ -16,12 +16,11 @@ def main(args=None):
     spin_thread.start()
     sleep(10)
     while True:
-        interface.small_movement("franka")
-        sleep(5)
+        # interface.small_movement("motoman")
         # sleep(100)
-        # for robot in ["ur","fanuc", "franka", "motoman"]:
-        #     interface.small_movement(robot=robot)
-        # sleep(5)
+        for robot in ["ur","fanuc", "franka", "motoman"]:
+            interface.small_movement(robot=robot)
+        sleep(5)
     
     interface.destroy_node()
     rclpy.shutdown()

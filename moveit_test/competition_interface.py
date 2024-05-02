@@ -190,7 +190,7 @@ class CompetitionInterface(Node):
         goal_pose = build_pose(current_pose.position.x, current_pose.position.y,
                                current_pose.position.z + 0.1, current_pose.orientation)
         self.print_pose(goal_pose)
-        self._move_robot_cartesian([current_pose,goal_pose], 0.3,0.3, False,robot)
+        self._move_robot_cartesian([current_pose,goal_pose], 0.4, 0.4, False,robot)
     
     def print_pose(self, pose : Pose):
         self.get_logger().info(f"x: {pose.position.x}\ty: {pose.position.y}\tz: {pose.position.z}\t")

@@ -26,10 +26,10 @@ def launch_setup(context, *args, **kwargs):
     urdf = os.path.join(get_package_share_directory("aprs_description"), "urdf/aprs_lab_robots.urdf.xacro")
 
     moveit_config = (
-        MoveItConfigsBuilder("aprs_robots", package_name="aprs_moveit_config")
+        MoveItConfigsBuilder("aprs_lab_robots", package_name="aprs_moveit_config")
         .robot_description(urdf)
         .robot_description_semantic(file_path="config/aprs_lab_robots.srdf")
-        .trajectory_execution(file_path="config/moveit_controllers.yaml")
+        .trajectory_execution(file_path="config/controllers.yaml")
         .planning_pipelines(pipelines=["ompl"])
         .joint_limits(file_path="config/joint_limits.yaml")
         .moveit_cpp(
