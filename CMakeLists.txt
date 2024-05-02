@@ -22,7 +22,8 @@ ament_python_install_package(${PROJECT_NAME} SCRIPTS_DESTINATION lib/${PROJECT_N
 
 # Install Python executables
 install(PROGRAMS
-  scripts/moveit_test_node.py
+  nodes/moveit_test_node.py
+  nodes/individual_moveit_test_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

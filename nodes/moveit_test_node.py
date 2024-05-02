@@ -14,12 +14,12 @@ def main(args=None):
 
     spin_thread = threading.Thread(target=executor.spin)
     spin_thread.start()
-    sleep(10)
+    # sleep(10)
     while True:
-        # interface.small_movement("motoman")
+        interface.small_movement("ur")
         # sleep(100)
-        for robot in ["ur","fanuc", "franka", "motoman"]:
-            interface.small_movement(robot=robot)
+        # for robot in ["ur","fanuc", "franka", "motoman"]:
+        #     interface.small_movement(robot=robot)
         sleep(5)
     
     interface.destroy_node()

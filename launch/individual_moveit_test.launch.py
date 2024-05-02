@@ -33,36 +33,20 @@ def launch_setup(context, *args, **kwargs):
         .planning_pipelines(pipelines=["ompl"])
         .joint_limits(file_path="config/joint_limits.yaml")
         .moveit_cpp(
-            file_path=get_package_share_directory("moveit_test")
-            + "/config/moveit_test_config.yaml"
+            file_path=get_package_share_directory("aprs_ur_moveit_config")
+            + "/config/moveitpy_config.yaml"
         )
         .to_moveit_configs()
     )
 
-    trajectory_execution = {
-        "moveit_manage_controllers": False,
-        "trajectory_execution.allowed_execution_duration_scaling": 1.2,
-        "trajectory_execution.allowed_goal_duration_margin": 0.5,
-        "trajectory_execution.allowed_start_tolerance": 0.01,
-    }
-
-    planning_scene_monitor_parameters = {
-        "publish_planning_scene": True,
-        "publish_geometry_updates": True,
-        "publish_state_updates": True,
-        "publish_transforms_updates": True,
-    }
-    
-    parameters_dict = moveit_config.to_dict()
-    parameters_dict["use_sim_time"] = True
-    parameters_dict.update(trajectory_execution)
-    parameters_dict.update(planning_scene_monitor_parameters)
     moveit_py_test = Node(
         package="moveit_test",
-        executable="moveit_test_node.py",
+        executable="individual_moveit_test_node.py",
+        namespace="ur",
         output="screen",
         parameters=[
-            parameters_dict
+            moveit_config.to_dict(),
+            {"use_sim_time" : True}
         ],
     )
     

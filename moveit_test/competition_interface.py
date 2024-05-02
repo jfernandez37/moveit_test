@@ -55,22 +55,22 @@ class CompetitionInterface(Node):
         self._aprs_robots = MoveItPy(node_name="aprs_robots_moveit_py")
 
         self._ur_robot : PlanningComponent = self._aprs_robots.get_planning_component("aprs_ur")
-        self._fanuc_robot : PlanningComponent = self._aprs_robots.get_planning_component("aprs_fanuc")
-        self._franka_robot : PlanningComponent = self._aprs_robots.get_planning_component("aprs_franka")
-        self._motoman_robot : PlanningComponent = self._aprs_robots.get_planning_component("aprs_motoman")
+        # self._fanuc_robot : PlanningComponent = self._aprs_robots.get_planning_component("aprs_fanuc")
+        # self._franka_robot : PlanningComponent = self._aprs_robots.get_planning_component("aprs_franka")
+        # self._motoman_robot : PlanningComponent = self._aprs_robots.get_planning_component("aprs_motoman")
         self._robot_info = {
             "ur":{"planning_component":self._ur_robot,
-                  "end_link": "wrist_3_link",
+                  "end_link": "tool0",
                   "group_name": "aprs_ur"},
-            "fanuc":{"planning_component":self._fanuc_robot,
-                  "end_link": "link_6",
-                  "group_name": "aprs_fanuc"},
-            "franka":{"planning_component":self._franka_robot,
-                  "end_link": "fr3_hand_tcp",
-                  "group_name": "aprs_franka"},
-            "motoman":{"planning_component":self._motoman_robot,
-                  "end_link": "link_t",
-                  "group_name": "aprs_motoman"}
+            # "fanuc":{"planning_component":self._fanuc_robot,
+            #       "end_link": "link_6",
+            #       "group_name": "aprs_fanuc"},
+            # "franka":{"planning_component":self._franka_robot,
+            #       "end_link": "fr3_hand_tcp",
+            #       "group_name": "aprs_franka"},
+            # "motoman":{"planning_component":self._motoman_robot,
+            #       "end_link": "link_t",
+            #       "group_name": "aprs_motoman"}
         }
         self._planning_scene_monitor : PlanningSceneMonitor = self._aprs_robots.get_planning_scene_monitor()
         
@@ -165,22 +165,6 @@ class CompetitionInterface(Node):
             logger.error("Planning failed")
             return False
         return True
-
-    def move_robot_random(self, robot="ur"):
-        robot_model = self._aprs_robots.get_robot_model()
-        robot_state = RobotState(robot_model)
-
-        # randomize the robot state
-        robot_state.set_to_random_positions()
-
-        # set plan start state to current state
-        with self._planning_scene_monitor.read_write() as scene:
-            self._robot_info[robot]["planning_component"].set_start_state(robot_state = scene.current_state)
-            scene.current_state.set_to_random_positions()
-            self._robot_info[robot]["planning_component"].set_goal_state(robot_state=scene.current_state)
-
-        # plan to goal
-        self._plan_and_execute(self._aprs_robots,self._robot_info[robot]["planning_component"], self.get_logger())
         
     def small_movement(self, robot="ur"):
         with self._planning_scene_monitor.read_write() as scene:
