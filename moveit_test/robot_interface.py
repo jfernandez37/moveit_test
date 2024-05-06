@@ -10,9 +10,9 @@ class RobotInterface(Node):
     def __init__(self):
         super().__init__("robot_interface")
         
-        self._robot = MoveItPy(node_name="ur_moveit_py", ns="ur")
+        self._robot = MoveItPy(node_name="ur_moveit_py")
         
-        self._planning_group: PlanningComponent = self._robot.get_planning_component("ur_arm")
+        self._planning_group: PlanningComponent = self._robot.get_planning_component("aprs_ur")
         
         self._planning_scene_monitor: PlanningSceneMonitor = self._robot.get_planning_scene_monitor()
         
@@ -21,7 +21,7 @@ class RobotInterface(Node):
             scene: PlanningScene
             current_state: RobotState = scene.current_state
             
-            print(current_state.get_joint_group_positions("ur_arm"))
+            print(current_state.get_joint_group_positions("aprs_ur"))
             
             return current_state.get_pose("tool0")
     

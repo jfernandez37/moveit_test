@@ -27,7 +27,7 @@ def launch_setup(context, *args, **kwargs):
 
     moveit_config = (
         MoveItConfigsBuilder("aprs_ur", package_name="aprs_ur_moveit_config")
-        .robot_description(urdf)
+        .robot_description(file_path=urdf)
         .robot_description_semantic(file_path="config/aprs_lab_robots.srdf")
         .trajectory_execution(file_path="config/controllers.yaml")
         .planning_pipelines(pipelines=["ompl"])
@@ -42,7 +42,7 @@ def launch_setup(context, *args, **kwargs):
     moveit_py_test = Node(
         package="moveit_test",
         executable="individual_moveit_test_node.py",
-        namespace="ur",
+        # namespace="ur",
         output="screen",
         parameters=[
             moveit_config.to_dict(),
