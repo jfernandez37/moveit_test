@@ -39,7 +39,7 @@ class RobotInterface(Node):
         
         print(config_dict)
         
-        self._robot = MoveItPy(node_name=f"{robot_prefix}_moveit_py", config_dict=config_dict)
+        self._robot = MoveItPy(node_name=f"{robot_prefix}_moveit_py", config_dict=config_dict, namespace=robot_prefix)
         
         self._planning_group: PlanningComponent = self._robot.get_planning_component(f"{robot_prefix}_arm")
         
