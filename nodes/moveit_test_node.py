@@ -16,7 +16,7 @@ def main(args=None):
     spin_thread.start()
     # sleep(10)
     while True:
-        interface.small_movement("ur")
+        interface.small_movement("motoman")
         # sleep(100)
         # for robot in ["ur","fanuc", "franka", "motoman"]:
         #     interface.small_movement(robot=robot)

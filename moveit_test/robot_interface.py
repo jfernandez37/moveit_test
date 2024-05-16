@@ -1,16 +1,27 @@
 from rclpy.node import Node
-from moveit.planning import MoveItPy, PlanningComponent, PlanningSceneMonitor
+from moveit.planning import MoveItPy, PlanningComponent, PlanningSceneMonitor, PlanRequestParameters
 
 from moveit.core.planning_scene import PlanningScene
 from moveit.core.robot_state import RobotState
+from moveit.core.planning_interface import MotionPlanResponse
+from moveit.core.controller_manager import ExecutionStatus
 
 from geometry_msgs.msg import Pose
+from moveit_msgs.msg import MoveItErrorCodes
 
 import os
 
 from moveit_configs_utils import MoveItConfigsBuilder
 from ament_index_python.packages import get_package_share_directory
 
+class ItemNotFound(Exception):
+    pass
+
+class ExecutionFailure(Exception):
+    pass
+
+class PlanningFailure(Exception):
+    pass
 
 class RobotInterface(Node):
     def __init__(self, robot_prefix: str):
@@ -19,7 +30,6 @@ class RobotInterface(Node):
         urdf = os.path.join(get_package_share_directory("aprs_description"), f"urdf/aprs_{robot_prefix}.urdf.xacro")
         
         # launch_params_file_path = os.path.join(get_package_share_directory("moveit_test"),"config","launch_params.yaml")
-        
         moveit_config = (
             MoveItConfigsBuilder(f"aprs_{robot_prefix}", package_name=f"aprs_{robot_prefix}_moveit_config")
             .robot_description(file_path=urdf)
@@ -35,11 +45,11 @@ class RobotInterface(Node):
         )
         
         config_dict = moveit_config.to_dict()
-        config_dict["use_sim_time"] = True
-        
-        print(config_dict)
-        
-        self._robot = MoveItPy(node_name=f"{robot_prefix}_moveit_py", config_dict=config_dict, namespace=robot_prefix)
+        # config_dict["use_sim_time"] = True
+        print(config_dict.keys())
+                
+        self._robot = MoveItPy(node_name=f"{robot_prefix}_moveit_py", config_dict=config_dict, provide_planning_service=True)
+        # self._robot = MoveItPy(node_name=f"{robot_prefix}_moveit_py", config_dict=config_dict)
         
         self._planning_group: PlanningComponent = self._robot.get_planning_component(f"{robot_prefix}_arm")
         
@@ -60,28 +70,28 @@ class RobotInterface(Node):
         multi_plan_parameters=None,
     ):
         """Helper function to plan and execute a motion."""
+        single_plan_parameters = PlanRequestParameters(self._robot, self.group_name)
+        single_plan_parameters.max_acceleration_scaling_factor = 0.3
+        single_plan_parameters.max_velocity_scaling_factor = 0.3
+        single_plan_parameters.planning_pipeline = "ompl"
+        single_plan_parameters.planner_id = "RRTConnectkConfigDefault"
+        
         # plan to goal
         self.get_logger().info("Planning trajectory")
-        if multi_plan_parameters is not None:
-            plan_result = self._planning_group.plan(
-                multi_plan_parameters=multi_plan_parameters
-            )
-        elif single_plan_parameters is not None:
-            plan_result = self._planning_group.plan(
-                single_plan_parameters=single_plan_parameters
-            )
-        else:
-            plan_result = self._planning_group.plan()
+        plan: MotionPlanResponse = self._planning_group.plan(single_plan_parameters=single_plan_parameters)
+        plan_result: MoveItErrorCodes = plan.error_code
+        
         # execute the plan
-        if plan_result:
-            self.get_logger().info("Executing plan")
-            with self._planning_scene_monitor.read_write() as scene:
-                robot_trajectory = plan_result.trajectory
-            self._robot.execute(robot_trajectory, controllers=[])
+        if plan_result.val == MoveItErrorCodes.SUCCESS:
+            if not plan.trajectory.apply_totg_time_parameterization(0.3, 0.3):
+                self.get_logger().warn('Unable to retime trajectory')
+            
+            execution: ExecutionStatus =  self._robot.execute(plan.trajectory, controllers=[])
+            
+            if not execution.status == "SUCCEEDED":
+                self.get_logger().error(f'Unable to complete trajectory. Error: {execution.status}')
         else:
-            self.get_logger().error("Planning failed")
-            return False
-        return True
+            self.get_logger().error(f'Unable to plan trajectory. Error code: {plan_result.val}')
     
     def get_pose(self):
         with self._planning_scene_monitor.read_only() as scene:
