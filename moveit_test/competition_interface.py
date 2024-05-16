@@ -54,23 +54,23 @@ class CompetitionInterface(Node):
         # Moveit_py variables
         self._aprs_robots = MoveItPy(node_name="aprs_robots_moveit_py")
 
-        # self._ur_robot : PlanningComponent = self._aprs_robots.get_planning_component("aprs_ur")
-        # self._fanuc_robot : PlanningComponent = self._aprs_robots.get_planning_component("aprs_fanuc")
-        # self._franka_robot : PlanningComponent = self._aprs_robots.get_planning_component("aprs_franka")
-        # self._motoman_robot : PlanningComponent = self._aprs_robots.get_planning_component("aprs_motoman")
+        self._ur_robot : PlanningComponent = self._aprs_robots.get_planning_component("aprs_ur")
+        self._fanuc_robot : PlanningComponent = self._aprs_robots.get_planning_component("aprs_fanuc")
+        self._franka_robot : PlanningComponent = self._aprs_robots.get_planning_component("aprs_franka")
+        self._motoman_robot : PlanningComponent = self._aprs_robots.get_planning_component("aprs_motoman")
         self._robot_info = {
-            # "ur":{"planning_component":self._ur_robot,
-            #       "end_link": "tool0",
-            #       "group_name": "aprs_ur"},
-            # "fanuc":{"planning_component":self._fanuc_robot,
-            #       "end_link": "link_6",
-            #       "group_name": "aprs_fanuc"},
-            # "franka":{"planning_component":self._franka_robot,
-            #       "end_link": "fr3_hand_tcp",
-            #       "group_name": "aprs_franka"},
-            # "motoman":{"planning_component":self._motoman_robot,
-            #       "end_link": "link_t",
-            #       "group_name": "aprs_motoman"}
+            "ur":{"planning_component":self._ur_robot,
+                  "end_link": "tool0",
+                  "group_name": "aprs_ur"},
+            "fanuc":{"planning_component":self._fanuc_robot,
+                  "end_link": "link_6",
+                  "group_name": "aprs_fanuc"},
+            "franka":{"planning_component":self._franka_robot,
+                  "end_link": "fr3_hand_tcp",
+                  "group_name": "aprs_franka"},
+            "motoman":{"planning_component":self._motoman_robot,
+                  "end_link": "link_t",
+                  "group_name": "aprs_motoman"}
         }
         self._planning_scene_monitor : PlanningSceneMonitor = self._aprs_robots.get_planning_scene_monitor()
         

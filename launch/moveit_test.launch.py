@@ -23,18 +23,17 @@ from ament_index_python.packages import get_package_share_directory
 
 def launch_setup(context, *args, **kwargs):
 
-    urdf = os.path.join(get_package_share_directory("aprs_description"), "urdf/aprs_ur.urdf.xacro")
+    urdf = os.path.join(get_package_share_directory("aprs_description"), "urdf/aprs_lab_robots.urdf.xacro")
 
     moveit_config = (
-        MoveItConfigsBuilder("aprs_ur", package_name="aprs_ur_moveit_config")
+        MoveItConfigsBuilder("aprs_lab_robots", package_name="aprs_moveit_config")
         .robot_description(urdf)
         .robot_description_semantic(file_path="config/aprs_lab_robots.srdf")
         .trajectory_execution(file_path="config/controllers.yaml")
         .planning_pipelines(pipelines=["ompl"])
         .joint_limits(file_path="config/joint_limits.yaml")
         .moveit_cpp(
-            file_path=get_package_share_directory("moveit_test")
-            + "/config/moveit_test_config.yaml"
+            file_path="config/moveitpy_config.yaml"
         )
         .to_moveit_configs()
     )
