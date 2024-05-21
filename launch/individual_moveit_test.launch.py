@@ -29,7 +29,7 @@ def launch_setup(context, *args, **kwargs):
         output="screen",
         parameters=[
             # param_dict,
-            # {"use_sim_time" : True}
+            {"use_sim_time" : True}
         ],
     )
     

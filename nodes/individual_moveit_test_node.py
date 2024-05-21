@@ -8,17 +8,10 @@ from time import sleep
 
 def main(args=None):
     rclpy.init(args=args)
-    
-    success = False
-    while not success:
-        try:
-            fanuc_interface = RobotInterface("fanuc")
-            print("TEST")
-            franka_interface = RobotInterface("franka")
-            success = True
-        except:
-            pass
-        
+
+    fanuc_interface = RobotInterface("fanuc")
+    franka_interface = RobotInterface("franka")
+         
     executor = MultiThreadedExecutor()
     executor.add_node(fanuc_interface)
     executor.add_node(franka_interface)
@@ -26,8 +19,7 @@ def main(args=None):
     spin_thread = threading.Thread(target=executor.spin)
     spin_thread.start()
     sleep(5)
-    # fanuc_interface.move_to_named_joint_state("test_state")
-    # input()
+
     while True:
         try:
             fanuc_interface.move_to_named_joint_state("home")
