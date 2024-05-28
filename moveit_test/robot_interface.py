@@ -25,31 +25,32 @@ class PlanningFailure(Exception):
 
 class RobotInterface(Node):
     def __init__(self, robot_prefix: str):
+        print(robot_prefix)
         super().__init__(f"{robot_prefix}_robot_interface")
         
-        urdf = os.path.join(get_package_share_directory("aprs_description"), f"urdf/aprs_{robot_prefix}.urdf.xacro")
+        # urdf = os.path.join(get_package_share_directory("aprs_description"), f"urdf/aprs_{robot_prefix}.urdf.xacro")
         
-        # launch_params_file_path = os.path.join(get_package_share_directory("moveit_test"),"config","launch_params.yaml")
-        moveit_config = (
-            MoveItConfigsBuilder(f"aprs_{robot_prefix}", package_name=f"aprs_{robot_prefix}_moveit_config")
-            .robot_description(file_path=urdf)
-            .robot_description_semantic(file_path=f"config/aprs_{robot_prefix}.srdf")
-            .trajectory_execution(file_path="config/controllers.yaml")
-            .planning_pipelines(pipelines=["ompl"])
-            .joint_limits(file_path="config/joint_limits.yaml")
-            .moveit_cpp(
-                file_path=get_package_share_directory(f"aprs_{robot_prefix}_moveit_config")
-                + "/config/moveitpy_config.yaml"
-            )
-            .to_moveit_configs()
-        )
+        # # launch_params_file_path = os.path.join(get_package_share_directory("moveit_test"),"config",f"{robot_prefix}_launch_params.yaml")
+        # moveit_config = (
+        #     MoveItConfigsBuilder(f"aprs_{robot_prefix}", package_name=f"aprs_{robot_prefix}_moveit_config")
+        #     .robot_description(file_path=urdf)
+        #     .robot_description_semantic(file_path=f"config/aprs_{robot_prefix}.srdf")
+        #     .trajectory_execution(file_path="config/controllers.yaml")
+        #     .planning_pipelines(pipelines=["ompl"])
+        #     .joint_limits(file_path="config/joint_limits.yaml")
+        #     .moveit_cpp(
+        #         file_path=get_package_share_directory(f"aprs_{robot_prefix}_moveit_config")
+        #         + "/config/moveitpy_config.yaml"
+        #     )
+        #     .to_moveit_configs()
+        # )
         
-        config_dict = moveit_config.to_dict()
-        # config_dict["use_sim_time"] = True
-        print(config_dict.keys())
+        # config_dict = moveit_config.to_dict()
+        # # config_dict["use_sim_time"] = True
+        # print(config_dict.keys())
                 
-        self._robot = MoveItPy(node_name=f"{robot_prefix}_moveit_py", config_dict=config_dict, provide_planning_service=True)
-        # self._robot = MoveItPy(node_name=f"{robot_prefix}_moveit_py", config_dict=config_dict)
+        # self._robot = MoveItPy(node_name=f"{robot_prefix}_moveit_py", config_dict=config_dict, provide_planning_service=True, launch_params_filepaths=[launch_params_file_path])
+        self._robot = MoveItPy(node_name=f"{robot_prefix}_moveit_py")
         
         self._planning_group: PlanningComponent = self._robot.get_planning_component(f"{robot_prefix}_arm")
         

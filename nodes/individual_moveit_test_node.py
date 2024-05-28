@@ -10,11 +10,11 @@ def main(args=None):
     rclpy.init(args=args)
 
     fanuc_interface = RobotInterface("fanuc")
-    franka_interface = RobotInterface("franka")
+    # franka_interface = RobotInterface("franka")
          
     executor = MultiThreadedExecutor()
     executor.add_node(fanuc_interface)
-    executor.add_node(franka_interface)
+    # executor.add_node(franka_interface)
 
     spin_thread = threading.Thread(target=executor.spin)
     spin_thread.start()
@@ -23,10 +23,10 @@ def main(args=None):
     while True:
         try:
             fanuc_interface.move_to_named_joint_state("home")
-            franka_interface.move_to_named_joint_state("home")
+            # franka_interface.move_to_named_joint_state("home")
             sleep(2)
             fanuc_interface.move_to_named_joint_state("test_state")
-            franka_interface.move_to_named_joint_state("test_state")
+            # franka_interface.move_to_named_joint_state("test_state")
             sleep(2)
         except KeyboardInterrupt:
             break
