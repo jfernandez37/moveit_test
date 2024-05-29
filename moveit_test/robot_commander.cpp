@@ -33,6 +33,10 @@ RobotCommander::RobotCommander(rclcpp::NodeOptions node_options, std::string rob
  : Node("robot_commander"),
   arm_planning_interface_(rclcpp::Node::make_shared(robot_name + "_arm", "", node_options), robot_name + "_arm")
 {
+  std::string test = this->get_parameter("robot_type").as_string();
+
+  std::cout << "ROBOT NAME PARAMETER" << test << std::endl;
+
   // Use upper joint velocity and acceleration limits
   arm_planning_interface_.setMaxAccelerationScalingFactor(1.0);
   arm_planning_interface_.setMaxVelocityScalingFactor(1.0);
@@ -105,6 +109,7 @@ void RobotCommander::ArmMoveTestState(
 int main(int argc, char *argv[])
 {
   rclcpp::init(argc, argv);
+  
   std::vector<std::string> node_arguments;
   node_arguments.push_back("-c fanuc_move_group");
   rclcpp::NodeOptions node_options;
@@ -112,7 +117,7 @@ int main(int argc, char *argv[])
   /*
   Add a node options that remaps move_group to fanuc_move_group. Make this class have robot_name parameter so we can make one for each robot parameter
   */
-  auto robot_commander = std::make_shared<RobotCommander>(node_options, "fanuc");
+  auto robot_commander = std::make_shared<RobotCommander>(node_options, "franka");
   rclcpp::spin(robot_commander);
   rclcpp::shutdown();
 }
