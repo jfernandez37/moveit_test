@@ -8,67 +8,66 @@
 class RobotCommander : public rclcpp::Node
 {
 public:
-  RobotCommander();
+  RobotCommander(rclcpp::NodeOptions, std::string);
   ~RobotCommander();
 
 private:
   // MoveIt Interfaces 
-  moveit::planning_interface::MoveGroupInterface fanuc_arm_;
+  moveit::planning_interface::MoveGroupInterface arm_planning_interface_;
 
   // ROS Services
-  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr fanuc_arm_move_home_srv_;
-  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr fanuc_arm_move_test_state_srv_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr arm_move_home_srv_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr arm_move_test_state_srv_;
 
   // Service Callbacks
-  void FanucArmMoveHome(
+  void ArmMoveHome(
     std_srvs::srv::Trigger::Request::SharedPtr req,
     std_srvs::srv::Trigger::Response::SharedPtr res);
 
-  void FanucArmMoveTestState(
+  void ArmMoveTestState(
     std_srvs::srv::Trigger::Request::SharedPtr req,
     std_srvs::srv::Trigger::Response::SharedPtr res);
 };
 
-RobotCommander::RobotCommander()
+RobotCommander::RobotCommander(rclcpp::NodeOptions node_options, std::string robot_name)
  : Node("robot_commander"),
-  fanuc_arm_(std::shared_ptr<rclcpp::Node>(std::move(this)), "fanuc_arm")
+  arm_planning_interface_(rclcpp::Node::make_shared(robot_name + "_arm", "", node_options), robot_name + "_arm")
 {
-  RCLCPP_INFO(get_logger(), "Inside constructor\n");
   // Use upper joint velocity and acceleration limits
-  fanuc_arm_.setMaxAccelerationScalingFactor(1.0);
-  fanuc_arm_.setMaxVelocityScalingFactor(1.0);
+  arm_planning_interface_.setMaxAccelerationScalingFactor(1.0);
+  arm_planning_interface_.setMaxVelocityScalingFactor(1.0);
 
   // Register services
-  fanuc_arm_move_home_srv_ = create_service<std_srvs::srv::Trigger>(
-    "/robot_commander/move_fanuc_arm_home", 
+  arm_move_home_srv_ = create_service<std_srvs::srv::Trigger>(
+    "/robot_commander/move_" + robot_name + "_arm_home", 
     std::bind(
-      &RobotCommander::FanucArmMoveHome, this,
+      &RobotCommander::ArmMoveHome, this,
       std::placeholders::_1, std::placeholders::_2));
   
-  fanuc_arm_move_test_state_srv_ = create_service<std_srvs::srv::Trigger>(
-    "/robot_commander/move_fanuc_arm_test_state", 
+  arm_move_test_state_srv_ = create_service<std_srvs::srv::Trigger>(
+    "/robot_commander/move_" + robot_name + "_arm_test_state", 
     std::bind(
-      &RobotCommander::FanucArmMoveTestState, this,
+      &RobotCommander::ArmMoveTestState, this,
       std::placeholders::_1, std::placeholders::_2));
 }
 
 RobotCommander::~RobotCommander() 
 {
-  fanuc_arm_.~MoveGroupInterface();
+  arm_planning_interface_.~MoveGroupInterface();
 }
 
-void RobotCommander::FanucArmMoveHome(
+void RobotCommander::ArmMoveHome(
   std_srvs::srv::Trigger::Request::SharedPtr req,
   std_srvs::srv::Trigger::Response::SharedPtr res)
 {
   (void)req; // remove unused parameter warning
-  fanuc_arm_.setNamedTarget("home");
+  arm_planning_interface_.setNamedTarget("home");
 
   moveit::planning_interface::MoveGroupInterface::Plan plan;
-  bool success = static_cast<bool>(fanuc_arm_.plan(plan));
+  bool success = static_cast<bool>(arm_planning_interface_.plan(plan));
 
   if (success) {
-    if (static_cast<bool>(fanuc_arm_.execute(plan))) {
+    if (static_cast<bool>(arm_planning_interface_.execute(plan))) {
       res->success = true;
     } else {
       res->success = false;
@@ -80,18 +79,18 @@ void RobotCommander::FanucArmMoveHome(
   }
 }
 
-void RobotCommander::FanucArmMoveTestState(
+void RobotCommander::ArmMoveTestState(
   std_srvs::srv::Trigger::Request::SharedPtr req,
   std_srvs::srv::Trigger::Response::SharedPtr res)
 {
   (void)req; // remove unused parameter warning
-  fanuc_arm_.setNamedTarget("test_state");
+  arm_planning_interface_.setNamedTarget("test_state");
 
   moveit::planning_interface::MoveGroupInterface::Plan plan;
-  bool success = static_cast<bool>(fanuc_arm_.plan(plan));
+  bool success = static_cast<bool>(arm_planning_interface_.plan(plan));
 
   if (success) {
-    if (static_cast<bool>(fanuc_arm_.execute(plan))) {
+    if (static_cast<bool>(arm_planning_interface_.execute(plan))) {
       res->success = true;
     } else {
       res->success = false;
@@ -106,7 +105,14 @@ void RobotCommander::FanucArmMoveTestState(
 int main(int argc, char *argv[])
 {
   rclcpp::init(argc, argv);
-  auto robot_commander = std::make_shared<RobotCommander>();
+  std::vector<std::string> node_arguments;
+  node_arguments.push_back("-c fanuc_move_group");
+  rclcpp::NodeOptions node_options;
+  node_options.arguments(node_arguments);
+  /*
+  Add a node options that remaps move_group to fanuc_move_group. Make this class have robot_name parameter so we can make one for each robot parameter
+  */
+  auto robot_commander = std::make_shared<RobotCommander>(node_options, "fanuc");
   rclcpp::spin(robot_commander);
   rclcpp::shutdown();
 }

@@ -54,7 +54,8 @@ def generate_launch_description():
     
     move_group_node = Node(
         package="moveit_ros_move_group",
-        executable="fanuc_move_group",
+        executable="move_group",
+        name="fanuc_move_group",
         # namespace="fanuc",
         output="screen",
         # remappings=[
