@@ -1,6 +1,7 @@
 import os
 from pytest import param
 import yaml
+import tempfile
 
 from launch import LaunchDescription
 from launch.actions import (
@@ -20,10 +21,15 @@ from launch_ros.substitutions import FindPackageShare
 
 from ament_index_python.packages import get_package_share_directory
 
+class NoAliasDumper(yaml.SafeDumper):
+    def ignore_aliases(self, data):
+        return True
+
 def generate_launch_description():
-    robot_commanders = []
     move_groups = []
-    for robot in ["franka"]:
+    all_params = {}
+    # for robot in ["franka", "fanuc", "ur", "motoman"]:
+    for robot in ["fanuc"]:
         # Robot Commander Node
         urdf = os.path.join(get_package_share_directory("aprs_description"), f"urdf/aprs_{robot}.urdf.xacro")
                 
@@ -44,32 +50,37 @@ def generate_launch_description():
         
         parameters_dict = moveit_config.to_dict()
         parameters_dict["use_sim_time"] = True
-        parameters_dict["robot_name"] = robot
         
-        print(parameters_dict.keys())
-        
-        robot_commanders.append(Node(
-            package="moveit_test",
-            executable="robot_commander",
-            output="screen",
-            parameters=[parameters_dict]
-        ))
+        all_params["/**"] = {"ros__parameters": {robot + '.' + k:y for k,y in parameters_dict.items()}}
         
         move_groups.append(Node(
             package="moveit_ros_move_group",
             executable="move_group",
             name=f"{robot}_move_group",
-            # namespace="fanuc",
+            namespace=robot,
             output="screen",
-            # remappings=[
-            #     ('/joint_states', '/fanuc/joint_states')             
-            # ],
+            remappings=[
+                ('robot_description', f'{robot}/robot_description')             
+            ],
             parameters=[
                 parameters_dict
             ],
         ))
+    
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        temp_param_file = tmp.name
+        print(temp_param_file)
+        params_string = yaml.dump(all_params,sort_keys=False,Dumper=NoAliasDumper)
+        tmp.write(bytes(params_string, 'utf-8'))
+        
+    robot_commander_node = Node(
+            package="moveit_test",
+            executable="robot_commander_node",
+            output="screen",
+            arguments=[temp_param_file]
+        )
 
     return LaunchDescription([
-        *robot_commanders,
+        robot_commander_node,
         *move_groups
         ])
