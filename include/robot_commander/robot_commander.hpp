@@ -8,7 +8,7 @@
 class RobotCommander : public rclcpp::Node
 {
 public:
-  RobotCommander(rclcpp::NodeOptions, std::string);
+  RobotCommander(rclcpp::NodeOptions, moveit::planning_interface::MoveGroupInterface::Options, std::string);
   ~RobotCommander();
 
 private:
@@ -19,7 +19,7 @@ private:
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr arm_move_home_srv_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr arm_move_test_state_srv_;
 
-  // Service Callbacks
+  // // Service Callbacks
   void ArmMoveHome(
     std_srvs::srv::Trigger::Request::SharedPtr req,
     std_srvs::srv::Trigger::Response::SharedPtr res);

@@ -1,8 +1,8 @@
 #include <robot_commander/robot_commander.hpp>
 
-RobotCommander::RobotCommander(rclcpp::NodeOptions node_options, std::string robot_name)
- : Node(robot_name + "_robot_commander", "", node_options),
-  arm_planning_interface_(std::shared_ptr<rclcpp::Node>(std::move(this)), robot_name + "_arm")
+RobotCommander::RobotCommander(rclcpp::NodeOptions node_options, moveit::planning_interface::MoveGroupInterface::Options moveit_options, std::string robot_name)
+ : Node("robot_commander", "", node_options),
+  arm_planning_interface_(std::shared_ptr<rclcpp::Node>(std::move(this)), moveit_options, std::shared_ptr<tf2_ros::Buffer>(), rclcpp::Duration::from_seconds(5))
 {
   // Use upper joint velocity and acceleration limits
   arm_planning_interface_.setMaxAccelerationScalingFactor(1.0);
@@ -20,6 +20,7 @@ RobotCommander::RobotCommander(rclcpp::NodeOptions node_options, std::string rob
     std::bind(
       &RobotCommander::ArmMoveTestState, this,
       std::placeholders::_1, std::placeholders::_2));
+  RCLCPP_INFO(get_logger(), "Loaded node correctly");
 }
 
 RobotCommander::~RobotCommander() 
@@ -31,6 +32,7 @@ void RobotCommander::ArmMoveHome(
   std_srvs::srv::Trigger::Request::SharedPtr req,
   std_srvs::srv::Trigger::Response::SharedPtr res)
 {
+  RCLCPP_INFO(get_logger(), "Called service");
   (void)req; // remove unused parameter warning
   arm_planning_interface_.setNamedTarget("home");
 

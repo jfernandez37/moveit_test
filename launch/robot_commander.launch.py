@@ -30,6 +30,7 @@ def generate_launch_description():
     all_params = {}
     # for robot in ["franka", "fanuc", "ur", "motoman"]:
     for robot in ["fanuc"]:
+        all_params[f"/{robot}/{robot}_robot_commander"] = {"ros__parameters" : {}}
         # Robot Commander Node
         urdf = os.path.join(get_package_share_directory("aprs_description"), f"urdf/aprs_{robot}.urdf.xacro")
                 
@@ -51,28 +52,29 @@ def generate_launch_description():
         parameters_dict = moveit_config.to_dict()
         parameters_dict["use_sim_time"] = True
         
-        all_params["/**"] = {"ros__parameters": {robot + '.' + k:y for k,y in parameters_dict.items()}}
+        for k,v in parameters_dict.items():
+            all_params[f"/{robot}/{robot}_robot_commander"]["ros__parameters"][k] = v
         
         move_groups.append(Node(
             package="moveit_ros_move_group",
             executable="move_group",
             name=f"{robot}_move_group",
-            namespace=robot,
+            # namespace=robot,
             output="screen",
-            remappings=[
-                ('robot_description', f'{robot}/robot_description')             
-            ],
+            # remappings=[
+            #     ('/fanuc_joint_trajectory_controller/follow_joint_trajectory','fanuc_joint_trajectory_controller/follow_joint_trajectory')             
+            # ],
             parameters=[
                 parameters_dict
             ],
         ))
-    
+        
     with tempfile.NamedTemporaryFile(delete=False) as tmp:
         temp_param_file = tmp.name
         print(temp_param_file)
         params_string = yaml.dump(all_params,sort_keys=False,Dumper=NoAliasDumper)
         tmp.write(bytes(params_string, 'utf-8'))
-        
+    
     robot_commander_node = Node(
             package="moveit_test",
             executable="robot_commander_node",
@@ -81,6 +83,6 @@ def generate_launch_description():
         )
 
     return LaunchDescription([
-        robot_commander_node,
+        # robot_commander_node,
         *move_groups
         ])
