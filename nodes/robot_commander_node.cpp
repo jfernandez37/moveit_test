@@ -17,8 +17,8 @@ int main(int argc, char *argv[])
   node_arguments.push_back(RCL_ROS_ARGS_FLAG);
   node_arguments.push_back(RCL_PARAM_FILE_FLAG);
   node_arguments.push_back(argv[argc-1]);
-  node_arguments.push_back(RCL_REMAP_FLAG);
-  node_arguments.push_back("move_group:=fanuc_move_group");
+  // node_arguments.push_back(RCL_REMAP_FLAG);
+  // node_arguments.push_back("move_group:=fanuc_move_group");
   
   for(auto arg : node_arguments){
     std::cout << arg << std::endl;
@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
   node_options.allow_undeclared_parameters(true);
   node_options.automatically_declare_parameters_from_overrides(true);
 
-  moveit::planning_interface::MoveGroupInterface::Options moveit_options("fanuc_arm", "robot_description", "");
+  moveit::planning_interface::MoveGroupInterface::Options moveit_options("fanuc_arm", "robot_description", "fanuc");
 
 
   std::shared_ptr<RobotCommander> node = std::make_shared<RobotCommander>(node_options, moveit_options, "fanuc");

@@ -58,12 +58,12 @@ def generate_launch_description():
         move_groups.append(Node(
             package="moveit_ros_move_group",
             executable="move_group",
-            name=f"{robot}_move_group",
-            # namespace=robot,
+            # name="move_group",
+            namespace=robot,
             output="screen",
-            # remappings=[
-            #     ('/fanuc_joint_trajectory_controller/follow_joint_trajectory','fanuc_joint_trajectory_controller/follow_joint_trajectory')             
-            # ],
+            remappings=[
+                ('/joint_states','joint_states')             
+            ],
             parameters=[
                 parameters_dict
             ],
