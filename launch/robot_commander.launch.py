@@ -29,8 +29,8 @@ def generate_launch_description():
     move_groups = []
     all_params = {}
     # for robot in ["franka", "fanuc", "ur", "motoman"]:
-    for robot in ["fanuc"]:
-        all_params[f"/{robot}/{robot}_robot_commander"] = {"ros__parameters" : {}}
+    for robot in ["fanuc", "franka"]:
+        all_params[f"{robot}_robot_commander"] = {"ros__parameters" : {}}
         # Robot Commander Node
         urdf = os.path.join(get_package_share_directory("aprs_description"), f"urdf/aprs_{robot}.urdf.xacro")
                 
@@ -53,7 +53,7 @@ def generate_launch_description():
         parameters_dict["use_sim_time"] = True
         
         for k,v in parameters_dict.items():
-            all_params[f"/{robot}/{robot}_robot_commander"]["ros__parameters"][k] = v
+            all_params[f"{robot}_robot_commander"]["ros__parameters"][k] = v
         
         move_groups.append(Node(
             package="moveit_ros_move_group",
@@ -83,6 +83,6 @@ def generate_launch_description():
         )
 
     return LaunchDescription([
-        # robot_commander_node,
+        robot_commander_node,
         *move_groups
         ])

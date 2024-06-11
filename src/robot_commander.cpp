@@ -1,7 +1,7 @@
 #include <robot_commander/robot_commander.hpp>
 
 RobotCommander::RobotCommander(rclcpp::NodeOptions node_options, moveit::planning_interface::MoveGroupInterface::Options moveit_options, std::string robot_name)
- : Node("robot_commander", "", node_options),
+ : Node(robot_name + "_robot_commander", "", node_options),
   arm_planning_interface_(std::shared_ptr<rclcpp::Node>(std::move(this)), moveit_options, std::shared_ptr<tf2_ros::Buffer>(), rclcpp::Duration::from_seconds(5))
 {
   // Use upper joint velocity and acceleration limits
