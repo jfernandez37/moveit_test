@@ -29,7 +29,7 @@ def generate_launch_description():
     move_groups = []
     all_params = {}
     # for robot in ["franka", "fanuc", "ur", "motoman"]:
-    for robot in ["fanuc", "franka"]:
+    for robot in ["motoman"]:
         all_params[f"{robot}_robot_commander"] = {"ros__parameters" : {}}
         # Robot Commander Node
         urdf = os.path.join(get_package_share_directory("aprs_description"), f"urdf/aprs_{robot}.urdf.xacro")
