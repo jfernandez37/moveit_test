@@ -58,6 +58,34 @@ robot_commander
 )
 ament_target_dependencies(robot_commander_node ${THIS_PACKAGE_INCLUDE_DEPENDS})
 
+add_executable(fanuc_robot_commander_node nodes/fanuc_robot_commander_node.cpp)
+target_include_directories(fanuc_robot_commander_node PRIVATE include)
+target_link_libraries(fanuc_robot_commander_node
+robot_commander
+)
+ament_target_dependencies(fanuc_robot_commander_node ${THIS_PACKAGE_INCLUDE_DEPENDS})
+
+add_executable(franka_robot_commander_node nodes/franka_robot_commander_node.cpp)
+target_include_directories(franka_robot_commander_node PRIVATE include)
+target_link_libraries(franka_robot_commander_node
+robot_commander
+)
+ament_target_dependencies(franka_robot_commander_node ${THIS_PACKAGE_INCLUDE_DEPENDS})
+
+add_executable(motoman_robot_commander_node nodes/motoman_robot_commander_node.cpp)
+target_include_directories(motoman_robot_commander_node PRIVATE include)
+target_link_libraries(motoman_robot_commander_node
+robot_commander
+)
+ament_target_dependencies(motoman_robot_commander_node ${THIS_PACKAGE_INCLUDE_DEPENDS})
+
+add_executable(ur_robot_commander_node nodes/ur_robot_commander_node.cpp)
+target_include_directories(ur_robot_commander_node PRIVATE include)
+target_link_libraries(ur_robot_commander_node
+robot_commander
+)
+ament_target_dependencies(ur_robot_commander_node ${THIS_PACKAGE_INCLUDE_DEPENDS})
+
 ament_export_libraries(
   robot_commander
 )
@@ -74,6 +102,10 @@ ament_export_include_directories(
 
 install(TARGETS
   robot_commander_node
+  fanuc_robot_commander_node
+  franka_robot_commander_node
+  motoman_robot_commander_node
+  ur_robot_commander_node
   DESTINATION lib/${PROJECT_NAME})
 
 ament_package()
