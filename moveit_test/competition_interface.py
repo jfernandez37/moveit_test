@@ -3,6 +3,9 @@ import rclpy
 from rclpy.node import Node
 from rclpy.parameter import Parameter
 from rclpy.time import Duration, Time
+from rclpy.qos import qos_profile_sensor_data
+
+import math
 
 from moveit.planning import PlanningComponent, PlanningSceneMonitor
 from moveit_msgs.srv import GetCartesianPath, GetPositionFK, ApplyPlanningScene, GetPlanningScene
@@ -19,9 +22,15 @@ from moveit.core.robot_trajectory import RobotTrajectory
 
 from std_msgs.msg import Header
 
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, PoseStamped
 
-from moveit_test.utils import build_pose
+from moveit_test.utils import build_pose, multiply_pose, rpy_from_quaternion, quaternion_from_euler
+
+from ariac_msgs.msg import (
+    Part as PartMsg,
+    AdvancedLogicalCameraImage as AdvancedLogicalCameraImageMsg,
+    PartPose as PartPoseMsg
+)
 
 class Error(Exception):
   def __init__(self, value: str):
@@ -40,7 +49,12 @@ class CompetitionInterface(Node):
     Raises:
         KeyboardInterrupt: Exception raised when the user uses Ctrl+C to kill a process
     '''
-
+    
+    _part_heights = {PartMsg.BATTERY : 0.04,
+                    PartMsg.PUMP : 0.12,
+                    PartMsg.REGULATOR : 0.07,
+                    PartMsg.SENSOR : 0.07}
+    
     def __init__(self):
         super().__init__('competition_interface')
 
@@ -75,6 +89,18 @@ class CompetitionInterface(Node):
         self._planning_scene_monitor : PlanningSceneMonitor = self._aprs_robots.get_planning_scene_monitor()
         
         self.get_cartesian_path_client = self.create_client(GetCartesianPath, "compute_cartesian_path")
+
+        self.camera_parts = []
+        self.camera_pose = Pose()
+        
+        self.advanced_logical_camera_sub = self.create_subscription(AdvancedLogicalCameraImageMsg,
+                                                                    "/ros_topic_advanced_logical_camera",
+                                                                    self.advanced_logical_camera_cb,
+                                                                    qos_profile_sensor_data)
+        
+    def advanced_logical_camera_cb(self, msg: AdvancedLogicalCameraImageMsg):
+        self.camera_parts = msg.part_poses
+        self.camera_pose = msg.sensor_pose
     
     def _call_get_cartesian_path(self, waypoints : list, 
                                   max_velocity_scaling_factor : float, 
@@ -82,7 +108,7 @@ class CompetitionInterface(Node):
                                   avoid_collision : bool,
                                   robot : str = "ur"):
 
-        self.get_logger().info("Getting cartesian path")
+        self.log_("Getting cartesian path")
 
         request = GetCartesianPath.Request()
 
@@ -114,7 +140,7 @@ class CompetitionInterface(Node):
         if result.fraction < 0.9:
             self.get_logger().error("Unable to plan cartesian trajectory")
 
-        self.get_logger().info("Returning cartesian path")
+        self.log_("Returning cartesian path")
         return result.solution
     
     def _move_robot_cartesian(self, waypoints, velocity, acceleration, avoid_collision = True, robot = "ur"):
@@ -130,9 +156,21 @@ class CompetitionInterface(Node):
             point = trajectory_msg.joint_trajectory.points[-1]
             dur = Duration(seconds=point.time_from_start.sec, nanoseconds=point.time_from_start.nanosec)
 
-            self.get_logger().info(f"Motion will take {dur.nanoseconds} nanoseconds to complete")
+            self.log_(f"Motion will take {dur.nanoseconds} nanoseconds to complete")
 
         self._aprs_robots.execute(trajectory, controllers=[])
+    
+    def _move_robot_to_pose(self,pose: Pose, robot: str):
+        self.get_logger().info(str(pose))
+        with self._planning_scene_monitor.read_write() as scene:
+            self._robot_info[robot]["planning_component"].set_start_state(robot_state = scene.current_state)
+
+            pose_goal = PoseStamped()
+            pose_goal.header.frame_id = "world"
+            pose_goal.pose = pose
+            self._robot_info[robot]["planning_component"].set_goal_state(pose_stamped_msg=pose_goal, pose_link=self._robot_info[robot]["end_link"])
+        
+        self._plan_and_execute(self._aprs_robots,self._robot_info[robot]["planning_component"], self.get_logger())
     
     def _plan_and_execute(
         self,
@@ -155,6 +193,7 @@ class CompetitionInterface(Node):
             )
         else:
             plan_result = planning_component.plan()
+            logger.info("Plan made")
         # execute the plan
         if plan_result:
             logger.info("Executing plan")
@@ -177,7 +216,7 @@ class CompetitionInterface(Node):
         self._move_robot_cartesian([current_pose,goal_pose], 0.4, 0.4, False,robot)
     
     def print_pose(self, pose : Pose):
-        self.get_logger().info(f"x: {pose.position.x}\ty: {pose.position.y}\tz: {pose.position.z}\t")
+        self.log_(f"x: {pose.position.x}\ty: {pose.position.y}\tz: {pose.position.z}\t")
     
     def move_robot_named_position(self, position_name : str, robot : str="ur"):
         
@@ -187,3 +226,34 @@ class CompetitionInterface(Node):
             self._robot_info[robot]["planning_component"].set_goal_state(configuration_name=position_name)
 
         self._plan_and_execute(self._aprs_robots,self._robot_info[robot]["planning_component"], self.get_logger())
+    
+    def pick_part(self, part_to_pick: PartMsg):
+        part_pose = Pose()
+        found_part = False
+        self.log_(f"length of camera parts: {len(self.camera_parts)}")
+        for part in self.camera_parts:
+            self.log_(f"{part.part.type}=={part_to_pick.type} and {part.part.color} == {part_to_pick.color}")
+            part : PartPoseMsg
+            if part.part.type == part_to_pick.type and part.part.color == part_to_pick.color:
+                part_pose = multiply_pose(self.camera_pose, part.pose)
+                found_part = True
+                break
+        
+        if not found_part:
+            self.log_("ERROR: Unable to locate part")
+            return False
+        self.log_("Part located")
+        
+        part_rotation = rpy_from_quaternion(part_pose.orientation)[2]
+        
+        gripper_orienation = quaternion_from_euler(0.0, math.pi, part_rotation)
+        
+        self._move_robot_to_pose(build_pose(part_pose.position.x, part_pose.position.y, part_pose.position.z + 0.5,
+                                            gripper_orienation), "fanuc")
+        waypoints = [build_pose(part_pose.position.x, part_pose.position.y, part_pose.position.z+CompetitionInterface._part_heights[part_to_pick.type]+0.008,
+                                gripper_orienation)]
+        self._move_robot_cartesian(waypoints, 0.3, 0.3, False, "fanuc")
+        
+        
+    def log_(self, msg: str):
+        self.get_logger().info(msg)

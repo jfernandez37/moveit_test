@@ -6,6 +6,8 @@ from moveit_test.competition_interface import CompetitionInterface
 from rclpy.executors import MultiThreadedExecutor
 from time import sleep
 
+from ariac_msgs.msg import Part
+
 def main(args=None):
     rclpy.init(args=args)
     interface = CompetitionInterface()
@@ -15,12 +17,15 @@ def main(args=None):
     spin_thread = threading.Thread(target=executor.spin)
     spin_thread.start()
     # sleep(10)
-    while True:
-        interface.small_movement("motoman")
-        # sleep(100)
-        # for robot in ["ur","fanuc", "franka", "motoman"]:
-        #     interface.small_movement(robot=robot)
-        sleep(5)
+    # while True:
+    #     for robot in ["ur","fanuc", "franka", "motoman"]:
+    #         interface.small_movement(robot=robot)
+    #     sleep(5)
+    part_to_pick = Part()
+    part_to_pick.type = Part.BATTERY
+    part_to_pick.color = Part.BLUE
+    sleep(5)
+    interface.pick_part(part_to_pick)
     
     interface.destroy_node()
     rclpy.shutdown()
