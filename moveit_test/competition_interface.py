@@ -6,6 +6,7 @@ from rclpy.time import Duration, Time
 from rclpy.qos import qos_profile_sensor_data
 
 import math
+import time
 
 from moveit.planning import PlanningComponent, PlanningSceneMonitor
 from moveit_msgs.srv import GetCartesianPath, GetPositionFK, ApplyPlanningScene, GetPlanningScene
@@ -55,6 +56,11 @@ class CompetitionInterface(Node):
                     PartMsg.REGULATOR : 0.07,
                     PartMsg.SENSOR : 0.07}
     
+    _robot_world_coords = {"fanuc": (-0.5222875, -0.073025),
+                           "franka": (-1.3145625, -1.375),
+                           "motoman": (0.4953, -0.08255),
+                           "ur": (0.7864625, -1.375)}
+    
     def __init__(self):
         super().__init__('competition_interface')
 
@@ -77,13 +83,13 @@ class CompetitionInterface(Node):
                   "end_link": "tool0",
                   "group_name": "aprs_ur"},
             "fanuc":{"planning_component":self._fanuc_robot,
-                  "end_link": "link_6",
+                  "end_link": "fanuc_gripper",
                   "group_name": "aprs_fanuc"},
             "franka":{"planning_component":self._franka_robot,
                   "end_link": "fr3_hand_tcp",
                   "group_name": "aprs_franka"},
             "motoman":{"planning_component":self._motoman_robot,
-                  "end_link": "link_t",
+                  "end_link": "motoman_gripper",
                   "group_name": "aprs_motoman"}
         }
         self._planning_scene_monitor : PlanningSceneMonitor = self._aprs_robots.get_planning_scene_monitor()
@@ -227,6 +233,27 @@ class CompetitionInterface(Node):
 
         self._plan_and_execute(self._aprs_robots,self._robot_info[robot]["planning_component"], self.get_logger())
     
+    def closest_robot_to_world_pose(self, x: float, y:float):
+        return sorted([(robot, abs(math.sqrt((x-coord[0])**2 + (y-coord[1])**2))) for robot, coord in CompetitionInterface._robot_world_coords.items()], key=lambda x: x[1])[0][0]
+    
+    def wait_for_attatch(self, timeout: float, robot: str):
+        with self._planning_scene_monitor.read_write() as scene:
+            current_pose = scene.current_state.get_pose(self._robot_info[robot]["end_link"])
+        start_time = time.time()
+        while True:
+            time.sleep(0.2)
+            if time.time()-start_time >= timeout:
+                self.log_("Unable to pick up part")
+                return False
+            
+            current_pose=build_pose(current_pose.position.x, current_pose.position.y,
+                                    current_pose.position.z-0.0005,
+                                    current_pose.orientation)
+            self._move_robot_cartesian([current_pose], 0.3, 0.3, False, robot)
+
+        self.get_logger().info("Attached to part")
+        return True
+    
     def pick_part(self, part_to_pick: PartMsg):
         part_pose = Pose()
         found_part = False
@@ -239,20 +266,26 @@ class CompetitionInterface(Node):
                 found_part = True
                 break
         
+        closest_robot_to_part = self.closest_robot_to_world_pose(part_pose.position.x, part_pose.position.y)
+        
+        self.log_("Closest robot to part is " + closest_robot_to_part)
+        
         if not found_part:
             self.log_("ERROR: Unable to locate part")
             return False
-        self.log_("Part located")
+        self.log_("Part located. Z value = "+str(part_pose.position.z))
         
         part_rotation = rpy_from_quaternion(part_pose.orientation)[2]
         
         gripper_orienation = quaternion_from_euler(0.0, math.pi, part_rotation)
         
-        self._move_robot_to_pose(build_pose(part_pose.position.x, part_pose.position.y, part_pose.position.z + 0.5,
-                                            gripper_orienation), "fanuc")
+        self._move_robot_to_pose(build_pose(part_pose.position.x, part_pose.position.y, part_pose.position.z + 0.25,
+                                            gripper_orienation), closest_robot_to_part)
         waypoints = [build_pose(part_pose.position.x, part_pose.position.y, part_pose.position.z+CompetitionInterface._part_heights[part_to_pick.type]+0.008,
                                 gripper_orienation)]
-        self._move_robot_cartesian(waypoints, 0.3, 0.3, False, "fanuc")
+        self._move_robot_cartesian(waypoints, 0.3, 0.3, False, closest_robot_to_part)
+        
+        self.wait_for_attatch(60.0, closest_robot_to_part)
         
         
     def log_(self, msg: str):
