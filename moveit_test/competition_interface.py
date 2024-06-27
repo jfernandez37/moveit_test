@@ -100,7 +100,7 @@ class CompetitionInterface(Node):
         self.camera_pose = Pose()
         
         self.advanced_logical_camera_sub = self.create_subscription(AdvancedLogicalCameraImageMsg,
-                                                                    "/ros_topic_advanced_logical_camera",
+                                                                    "/second_advanced_logical_camera_ros_topic",
                                                                     self.advanced_logical_camera_cb,
                                                                     qos_profile_sensor_data)
         

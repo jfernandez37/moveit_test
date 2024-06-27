@@ -22,8 +22,8 @@ def main(args=None):
     #         interface.small_movement(robot=robot)
     #     sleep(5)
     part_to_pick = Part()
-    part_to_pick.type = Part.BATTERY
-    part_to_pick.color = Part.BLUE
+    part_to_pick.type = Part.REGULATOR
+    part_to_pick.color = Part.GREEN
     sleep(5)
     interface.pick_part(part_to_pick)
     
