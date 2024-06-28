@@ -8,6 +8,7 @@ endif()
 set(THIS_PACKAGE_INCLUDE_DEPENDS
   rclcpp 
   moveit_ros_planning_interface
+  ariac_msgs
 )
 
 find_package(ament_cmake REQUIRED)

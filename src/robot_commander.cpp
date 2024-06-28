@@ -20,12 +20,33 @@ RobotCommander::RobotCommander(rclcpp::NodeOptions node_options, moveit::plannin
     std::bind(
       &RobotCommander::ArmMoveTestState, this,
       std::placeholders::_1, std::placeholders::_2));
-  RCLCPP_INFO(get_logger(), "Loaded node correctly");
+
+  pick_part_srv_ = create_service<aprs_interfaces::srv::PickPart>(
+    "/" + robot_name + "_pick_part",
+    std::bind(
+      &RobotCommander::pick_part_, this,
+      std::placeholders::_1, std::placeholders::_2));
+
+  // Advanced logical camera subscription
+  advanced_logical_camera_sub_ = this->create_subscription<ariac_msgs::msg::AdvancedLogicalCameraImage>(
+    "/advanced_logical_camera_ros_topic", rclcpp::SensorDataQoS(),
+    std::bind(&RobotCommander::advanced_logical_camera_cb, this, std::placeholders::_1)
+  );
 }
 
 RobotCommander::~RobotCommander() 
 {
   arm_planning_interface_.~MoveGroupInterface();
+}
+
+void RobotCommander::advanced_logical_camera_cb(const ariac_msgs::msg::AdvancedLogicalCameraImage::ConstSharedPtr msg){
+  if(!alc_recieved_data){
+    RCLCPP_DEBUG(get_logger(), "Received data from advanced logical camera");
+    alc_recieved_data = true;
+  }
+
+  env_parts = msg->part_poses;
+  advanced_logical_camera_pose_ = msg->sensor_pose;
 }
 
 void RobotCommander::ArmMoveHome(
@@ -73,4 +94,91 @@ void RobotCommander::ArmMoveTestState(
     res->message = "Unable to generate trajectory";
     res->success = false;
   }
+}
+
+void RobotCommander::pick_part_(
+  const std::shared_ptr<aprs_interfaces::srv::PickPart::Request> request,
+  std::shared_ptr<aprs_interfaces::srv::PickPart::Response> response
+){
+  geometry_msgs::msg::Pose part_pose;
+  bool found_part = false;
+  ariac_msgs::msg::Part part_to_pick = request->part;
+  
+  for(auto part : env_parts){
+    if (part.part.type ==  part_to_pick.type && part.part.color == part_to_pick.color){
+      part_pose = MultiplyPose(advanced_logical_camera_pose_, part.pose);
+      found_part = true;
+      break;
+    }
+  }
+
+  if(!found_part){
+    RCLCPP_INFO(get_logger(), "Unable to locate part");
+    return false;
+  }
+
+  RCLCPP_INFO(get_logger(), "Found part!");
+
+  double part_rotation = GetYaw(part_pose);
+
+  std::vector<geometry_msgs::msg::Pose> waypoints;
+  waypoints.push_back(BuildPose(part_pose.position.x, part_pose.position.y,
+                                part_pose.position.z + 0.5, SetRobotOrientation(part_rotation)));
+  
+  waypoints.push_back(BuildPose(part_pose.position.x, part_pose.position.y,
+                                part_pose.position.z + part_heights_[part_to_pick.type] + pick_offset_, SetRobotOrientation(part_rotation)));
+
+  RobotMoveCartesian(waypoints, 0.3, 0.3, true);
+}
+
+bool RobotController::MoveRobotCartesian(
+  std::vector<geometry_msgs::msg::Pose> waypoints, double vsf, double asf, bool avoid_collisions
+){
+  moveit_msgs::msg::RobotTrajectory trajectory;
+}
+
+geometry_msgs::msg::Pose RobotCommander::MultiplyPose(
+  geometry_msgs::msg::Pose p1, geometry_msgs::msg::Pose p2
+){
+  KDL::Frame f1;
+  KDL::Frame f2;
+
+  tf2::fromMsg(p1, f1);
+  tf2::fromMsg(p2, f2);
+
+  return tf2::toMsg(f1 * f2);
+}
+
+double RobotCommander::GetYaw(geometry_msgs::msg::Pose pose){
+  tf2::Quaternion q(pose.orientation.x, pose.orientation.y, pose.orienation.z, pose.orienation.w);
+  tf2::Matrix3x3 m(q);
+  double roll, pitch, yaw;
+  m.getRPY(roll, pitch, yaw);
+  return yaw;
+}
+
+geometry_msgs::msg::Pose RobotCommander::BuildPose(
+  double x, double y, double z, geometry_msgs::msg::Quaternion orienation
+){
+  geometry_msgs::msg::Pose pose;
+  pose.position.x = x;
+  pose.position.y = y;
+  pose.position.z = z;
+  pose.orientation = orientation;
+
+  return pose;
+}
+
+geometry_msgs::msg::Quaternion RobotCommander::SetRobotOrientation(double rotation){
+  tf2::Quaternion tf_q;
+  tf_q.setRPY(0, 3.14159, rotation);
+
+  geometry_msgs::msg::Quaternion 1;
+
+  q.x = tf_q.x();
+  q.y = tf_q.y();
+  q.z = tf_q.z();
+  q.w = tf_q.w();
+
+  return q;
 }
