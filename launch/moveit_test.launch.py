@@ -33,8 +33,7 @@ def launch_setup(context, *args, **kwargs):
         .planning_pipelines(pipelines=["ompl"])
         .joint_limits(file_path="config/joint_limits.yaml")
         .moveit_cpp(
-            file_path=get_package_share_directory("moveit_test")
-            + "/config/moveit_test_config.yaml"
+            file_path="config/moveitpy_config.yaml"
         )
         .to_moveit_configs()
     )

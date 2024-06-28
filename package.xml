@@ -12,8 +12,9 @@
   <depend>rclcpp</depend>
   <depend>rclpy</depend>
   <depend>geometry_msgs</depend>
-  <depend>orocos_kdl</depend>
+  <depend>moveit_ros_planning_interface</depend>
   <depend>python3-pykdl</depend>
+  <depend>ariac_msgs</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

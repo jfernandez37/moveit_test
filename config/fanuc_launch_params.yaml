@@ -1,0 +1,3 @@
+fanuc_moveit_py:
+  ros__parameters:
+    use_sim_time: true
