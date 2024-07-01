@@ -135,6 +135,22 @@ bool RobotController::MoveRobotCartesian(
   std::vector<geometry_msgs::msg::Pose> waypoints, double vsf, double asf, bool avoid_collisions
 ){
   moveit_msgs::msg::RobotTrajectory trajectory;
+
+  double path_fraction = arm_planning_interface_.computeCartesianPath(waypoints, 0.01, 0.0, trajectory, avoid_collisions);
+
+  if (path_fraction < 0.9)
+  {
+    RCLCPP_ERROR(get_logger(), "Unable to generate trajectory through waypoints");
+    return false;
+  }
+
+  // Retime trajectory
+  robot_trajectory::RobotTrajectory rt(arm_planning_interface_.getCurrentState()->getRobotModel(), "floor_robot");
+  rt.setRobotTrajectoryMsg(*arm_planning_interface_.getCurrentState(), trajectory);
+  totg_.computeTimeStamps(rt, vsf, asf);
+  rt.getRobotTrajectoryMsg(trajectory);
+
+  return static_cast<bool>(arm_planning_interface_.execute(trajectory));
 }
 
 geometry_msgs::msg::Pose RobotCommander::MultiplyPose(
