@@ -90,7 +90,7 @@ class CompetitionInterface(Node):
         
         future = self.pick_part_clients_[closest_robot_to_part].call_async(request)
 
-        rclpy.spin_until_future_complete(self, future, timeout_sec=5)
+        rclpy.spin_until_future_complete(self, future, timeout_sec=150)
 
         if not future.done():
             raise Error("Timeout reached when calling pick part service")

@@ -32,6 +32,8 @@ RobotCommander::RobotCommander(rclcpp::NodeOptions node_options, moveit::plannin
     "/advanced_logical_camera_ros_topic", rclcpp::SensorDataQoS(),
     std::bind(&RobotCommander::advanced_logical_camera_cb, this, std::placeholders::_1)
   );
+
+  robot_name_ = robot_name;
 }
 
 RobotCommander::~RobotCommander() 
@@ -112,7 +114,7 @@ void RobotCommander::pick_part_(
   waypoints.push_back(BuildPose(part_pose.position.x, part_pose.position.y,
                                 part_pose.position.z + part_heights_[part_to_pick.type] + pick_offset_, SetRobotOrientation(part_rotation)));
 
-  MoveRobotCartesian(waypoints, 0.3, 0.3, true);
+  MoveRobotCartesian(waypoints, 0.75, 0.75, true);
 
   response->success = true;
 }
@@ -131,7 +133,7 @@ bool RobotCommander::MoveRobotCartesian(
   }
 
   // Retime trajectory
-  robot_trajectory::RobotTrajectory rt(arm_planning_interface_.getCurrentState()->getRobotModel(), "floor_robot");
+  robot_trajectory::RobotTrajectory rt(arm_planning_interface_.getCurrentState()->getRobotModel(), robot_name_ + "_arm");
   rt.setRobotTrajectoryMsg(*arm_planning_interface_.getCurrentState(), trajectory);
   totg_.computeTimeStamps(rt, vsf, asf);
   rt.getRobotTrajectoryMsg(trajectory);

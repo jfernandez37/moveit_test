@@ -65,6 +65,7 @@ private:
       {ariac_msgs::msg::Part::SENSOR, 0.07}};
   double pick_offset_ = 0.003;
   trajectory_processing::TimeOptimalTrajectoryGeneration totg_;
+  std::string robot_name_;
 
   // Utility functions
   geometry_msgs::msg::Pose MultiplyPose(geometry_msgs::msg::Pose, geometry_msgs::msg::Pose);
