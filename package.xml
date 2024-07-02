@@ -3,18 +3,21 @@
 <package format="3">
   <name>moveit_test</name>
   <version>0.0.0</version>
-  <description>Tutorial 6</description>
-  <maintainer email="justin.albrecht@nist.gov">Justin Albrecht</maintainer>
+  <description>Package for testing moveit in aprs_ros2_demo</description>
+  <maintainer email="joseph.fernandez@nist.gov">Joseph Fernandez</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
+  <depend>ariac_msgs</depend>
   <depend>rclcpp</depend>
   <depend>rclpy</depend>
   <depend>geometry_msgs</depend>
   <depend>moveit_ros_planning_interface</depend>
   <depend>python3-pykdl</depend>
-  <depend>ariac_msgs</depend>
+  <depend>aprs_interfaces</depend>
+
+  <member_of_group>rosidl_interface_packages</member_of_group>
 
   <export>
     <build_type>ament_cmake</build_type>

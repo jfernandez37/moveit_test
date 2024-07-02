@@ -9,6 +9,8 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   rclcpp 
   moveit_ros_planning_interface
   ariac_msgs
+  aprs_interfaces
+  tf2_kdl
 )
 
 find_package(ament_cmake REQUIRED)
@@ -32,6 +34,7 @@ install(PROGRAMS
   nodes/moveit_test_node.py
   nodes/individual_moveit_test_node.py
   nodes/cpp_test.py
+  nodes/individual_competition_node.py
 
   DESTINATION lib/${PROJECT_NAME}
 )

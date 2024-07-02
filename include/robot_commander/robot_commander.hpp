@@ -4,8 +4,10 @@
 
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
+#include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
 
-#include <aprs_interfaces/srv/PickPart.srv>
+#include <aprs_interfaces/srv/pick_part.hpp>
+// #include <aprs_interfaces/srv/spawn_sensor.hpp>
 
 #include <ariac_msgs/msg/advanced_logical_camera_image.hpp>
 
@@ -62,10 +64,14 @@ private:
       {ariac_msgs::msg::Part::REGULATOR, 0.07},
       {ariac_msgs::msg::Part::SENSOR, 0.07}};
   double pick_offset_ = 0.003;
+  trajectory_processing::TimeOptimalTrajectoryGeneration totg_;
 
   // Utility functions
   geometry_msgs::msg::Pose MultiplyPose(geometry_msgs::msg::Pose, geometry_msgs::msg::Pose);
   double GetYaw(geometry_msgs::msg::Pose);
   geometry_msgs::msg::Pose BuildPose(double, double, double, geometry_msgs::msg::Quaternion);
   geometry_msgs::msg::Quaternion SetRobotOrientation(double);
+
+  // Robot control functions
+  bool MoveRobotCartesian(std::vector<geometry_msgs::msg::Pose>, double, double, bool);
 };

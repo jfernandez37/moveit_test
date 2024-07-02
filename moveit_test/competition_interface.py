@@ -80,7 +80,7 @@ class CompetitionInterface(Node):
         self._motoman_robot : PlanningComponent = self._aprs_robots.get_planning_component("aprs_motoman")
         self._robot_info = {
             "ur":{"planning_component":self._ur_robot,
-                  "end_link": "tool0",
+                  "end_link": "ur_gripper",
                   "group_name": "aprs_ur"},
             "fanuc":{"planning_component":self._fanuc_robot,
                   "end_link": "fanuc_gripper",
