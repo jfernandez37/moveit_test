@@ -20,6 +20,11 @@ from ariac_msgs.msg import (
     PartPose as PartPoseMsg
 )
 
+from conveyor_interfaces.srv import (
+    EnableConveyor,
+    SetConveyorState
+)
+
 class Error(Exception):
   def __init__(self, value: str):
       self.value = value
@@ -55,6 +60,10 @@ class CompetitionInterface(Node):
                                                                     "/advanced_logical_camera_ros_topic",
                                                                     self.advanced_logical_camera_cb,
                                                                     qos_profile_sensor_data)
+        
+        self.enable_conveyor_client_ = self.create_client(EnableConveyor, "/aprs_conveyor/enable_conveyor")
+
+        self.set_conveyor_state_client_ = self.create_client(SetConveyorState, "/aprs_conveyor/set_conveyor_state")
         
     def advanced_logical_camera_cb(self, msg: AdvancedLogicalCameraImageMsg):
         self.camera_parts = msg.part_poses
@@ -98,3 +107,33 @@ class CompetitionInterface(Node):
         
     def log_(self, msg: str):
         self.get_logger().info(msg)
+
+    def enable_conveyor(self, enable: bool = True):
+        request = EnableConveyor.Request()
+        request.enable = enable
+        
+        future = self.enable_conveyor_client_.call_async(request)
+
+        rclpy.spin_until_future_complete(self, future, timeout_sec=150)
+
+        if not future.done():
+            raise Error("Timeout reached when calling enable conveyor service")
+    
+    def set_conveyor_state(self, direction: int = 0, speed: float = 0.0):
+        if direction not in [0,1]:
+            print("Direction must be either 0 (forward) or 1 (backward)")
+            return
+        if speed < 0 or speed > 50:
+            print("Speed must be between 0.0 and 0.5")
+            return
+        
+        request = SetConveyorState.Request()
+        request.direction = direction
+        request.speed = speed
+
+        future = self.set_conveyor_state_client_.call_async(request)
+
+        rclpy.spin_until_future_complete(self, future, timeout_sec=150)
+
+        if not future.done():
+            raise Error("Timeout reached when calling set conveyor state service")
