@@ -27,7 +27,7 @@ RobotCommander::RobotCommander(rclcpp::NodeOptions node_options, moveit::plannin
       &RobotCommander::pick_part_, this,
       std::placeholders::_1, std::placeholders::_2));
   
-  pick_part_srv_ = create_service<aprs_interfaces::srv::PickPart>(
+  move_cartesian_srv_ = create_service<aprs_interfaces::srv::MoveCartesian>(
     "/" + robot_name + "_move_cartesian",
     std::bind(
       &RobotCommander::move_cartesian_, this,
@@ -131,7 +131,7 @@ void RobotCommander::move_cartesian_(
 ){
   std::vector<geometry_msgs::msg::Pose> waypoints;
   for(auto pose : request->poses){
-    waypoints.push_back(pose)
+    waypoints.push_back(pose);
   }
 
   response->success = MoveRobotCartesian(waypoints, request->asf, request->vsf, request->avoid_collisions);

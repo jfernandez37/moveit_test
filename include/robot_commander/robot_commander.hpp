@@ -30,6 +30,7 @@ private:
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr arm_move_home_srv_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr arm_move_test_state_srv_;
   rclcpp::Service<aprs_interfaces::srv::PickPart>::SharedPtr pick_part_srv_;
+  rclcpp::Service<aprs_interfaces::srv::MoveCartesian>::SharedPtr move_cartesian_srv_;
 
   // Subscriptions
   rclcpp::Subscription<ariac_msgs::msg::AdvancedLogicalCameraImage>::SharedPtr advanced_logical_camera_sub_;
