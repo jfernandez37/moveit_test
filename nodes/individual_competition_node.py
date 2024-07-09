@@ -13,9 +13,9 @@ def main(args=None):
     interface = CompetitionInterface()
     executor = MultiThreadedExecutor()
     executor.add_node(interface)
-
     spin_thread = threading.Thread(target=executor.spin)
     spin_thread.start()
+    sleep(10)
     part_to_pick = Part()
     part_to_pick.type = Part.BATTERY
     part_to_pick.color = Part.BLUE
@@ -25,6 +25,11 @@ def main(args=None):
     part_to_pick.type = Part.REGULATOR
     part_to_pick.color = Part.GREEN
     interface.pick_part(part_to_pick)
+    
+    interface.enable_conveyor(True)
+    interface.set_conveyor_state(1, 0.5)
+    sleep(30)
+    interface.enable_conveyor(False)
     
     interface.destroy_node()
     rclpy.shutdown()

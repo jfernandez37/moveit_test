@@ -7,7 +7,7 @@
 #include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
 
 #include <aprs_interfaces/srv/pick_part.hpp>
-// #include <aprs_interfaces/srv/spawn_sensor.hpp>
+#include <aprs_interfaces/srv/move_cartesian.hpp>
 
 #include <ariac_msgs/msg/advanced_logical_camera_image.hpp>
 
@@ -49,6 +49,8 @@ private:
   // Competitor CBs
   void pick_part_(const std::shared_ptr<aprs_interfaces::srv::PickPart::Request> request,
                             std::shared_ptr<aprs_interfaces::srv::PickPart::Response> response);
+  void move_cartesian_(const std::shared_ptr<aprs_interfaces::srv::MoveCartesian::Request> request,
+                            std::shared_ptr<aprs_interfaces::srv::MoveCartesian::Response> response);
 
   // Sensor CBs
   void advanced_logical_camera_cb(const ariac_msgs::msg::AdvancedLogicalCameraImage::ConstSharedPtr msg);
@@ -75,4 +77,5 @@ private:
 
   // Robot control functions
   bool MoveRobotCartesian(std::vector<geometry_msgs::msg::Pose>, double, double, bool);
+  bool MoveRobotToPose(geometry_msgs::msg::Pose);
 };

@@ -26,6 +26,12 @@ RobotCommander::RobotCommander(rclcpp::NodeOptions node_options, moveit::plannin
     std::bind(
       &RobotCommander::pick_part_, this,
       std::placeholders::_1, std::placeholders::_2));
+  
+  pick_part_srv_ = create_service<aprs_interfaces::srv::PickPart>(
+    "/" + robot_name + "_move_cartesian",
+    std::bind(
+      &RobotCommander::move_cartesian_, this,
+      std::placeholders::_1, std::placeholders::_2));
 
   // Advanced logical camera subscription
   advanced_logical_camera_sub_ = this->create_subscription<ariac_msgs::msg::AdvancedLogicalCameraImage>(
@@ -119,6 +125,18 @@ void RobotCommander::pick_part_(
   response->success = true;
 }
 
+void RobotCommander::move_cartesian_(
+  const std::shared_ptr<aprs_interfaces::srv::MoveCartesian::Request> request,
+  std::shared_ptr<aprs_interfaces::srv::MoveCartesian::Response> response
+){
+  std::vector<geometry_msgs::msg::Pose> waypoints;
+  for(auto pose : request->poses){
+    waypoints.push_back(pose)
+  }
+
+  response->success = MoveRobotCartesian(waypoints, request->asf, request->vsf, request->avoid_collisions);
+}
+
 bool RobotCommander::MoveRobotCartesian(
   std::vector<geometry_msgs::msg::Pose> waypoints, double vsf, double asf, bool avoid_collisions
 ){
@@ -131,7 +149,7 @@ bool RobotCommander::MoveRobotCartesian(
     RCLCPP_ERROR(get_logger(), "Unable to generate trajectory through waypoints");
     return false;
   }
-
+  
   // Retime trajectory
   robot_trajectory::RobotTrajectory rt(arm_planning_interface_.getCurrentState()->getRobotModel(), robot_name_ + "_arm");
   rt.setRobotTrajectoryMsg(*arm_planning_interface_.getCurrentState(), trajectory);
