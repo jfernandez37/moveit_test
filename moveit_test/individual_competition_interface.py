@@ -8,7 +8,7 @@ from rclpy.qos import qos_profile_sensor_data
 import math
 import time
 
-from aprs_interfaces.srv import PickPart, MoveCartesian
+from aprs_interfaces.srv import PickPart, MoveCartesian, MoveToPose
 
 from geometry_msgs.msg import Pose
 
@@ -56,6 +56,7 @@ class CompetitionInterface(Node):
         
         self.pick_part_clients_ = {robot:self.create_client(PickPart, f"/{robot}_pick_part") for robot in ["fanuc", "franka", "motoman", "ur"]}
         self.move_cartesian_clients_ = {robot:self.create_client(MoveCartesian, f"/{robot}_move_cartesian") for robot in self._robot_world_coords.keys()}
+        self.move_robot_to_pose_clients_ = {robot:self.create_client(MoveToPose, f"/{robot}_move_to_pose") for robot in self._robot_world_coords.keys()}
         
         self.advanced_logical_camera_sub = self.create_subscription(AdvancedLogicalCameraImageMsg,
                                                                     "/advanced_logical_camera_ros_topic",
@@ -98,18 +99,28 @@ class CompetitionInterface(Node):
         pose = part_pose
         pose.position.z = pose.position.z+0.25
         
-        request = MoveCartesian.Request()
-        request.poses = [pose]
-        request.asf = 0.3
-        request.vsf = 0.3
-        request.avoid_collisions = False
+        request = MoveToPose.Request()
+        request.pose = pose
         
-        future = self.move_cartesian_clients_[closest_robot_to_part].call_async(request)
+        future = self.move_robot_to_pose_clients_[closest_robot_to_part].call_async(request)
         
         rclpy.spin_until_future_complete(self, future, timeout_sec=150)
 
         if not future.done():
-            raise Error("Timeout reached when calling move cartesian service")
+            raise Error("Timeout reached when calling move to pose service")
+        
+        # request = MoveCartesian.Request()
+        # request.poses = [pose]
+        # request.asf = 0.3
+        # request.vsf = 0.3
+        # request.avoid_collisions = False
+        
+        # future = self.move_cartesian_clients_[closest_robot_to_part].call_async(request)
+        
+        # rclpy.spin_until_future_complete(self, future, timeout_sec=150)
+
+        # if not future.done():
+        #     raise Error("Timeout reached when calling move cartesian service")
         
         # request = PickPart.Request()
         # request.part = part_to_pick

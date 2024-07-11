@@ -8,6 +8,8 @@
 
 #include <aprs_interfaces/srv/pick_part.hpp>
 #include <aprs_interfaces/srv/move_cartesian.hpp>
+#include <aprs_interfaces/srv/move_to_pose.hpp>
+
 
 #include <ariac_msgs/msg/advanced_logical_camera_image.hpp>
 
@@ -15,6 +17,9 @@
 
 #include <kdl/frames.hpp>
 #include <tf2_kdl/tf2_kdl.hpp>
+
+#include <moveit/robot_model_loader/robot_model_loader.h>
+#include <moveit/planning_interface/planning_interface.h>
 
 class RobotCommander : public rclcpp::Node
 {
@@ -31,6 +36,7 @@ private:
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr arm_move_test_state_srv_;
   rclcpp::Service<aprs_interfaces::srv::PickPart>::SharedPtr pick_part_srv_;
   rclcpp::Service<aprs_interfaces::srv::MoveCartesian>::SharedPtr move_cartesian_srv_;
+  rclcpp::Service<aprs_interfaces::srv::MoveToPose>::SharedPtr move_to_pose_srv_;
 
   // Subscriptions
   rclcpp::Subscription<ariac_msgs::msg::AdvancedLogicalCameraImage>::SharedPtr advanced_logical_camera_sub_;
@@ -52,6 +58,8 @@ private:
                             std::shared_ptr<aprs_interfaces::srv::PickPart::Response> response);
   void move_cartesian_(const std::shared_ptr<aprs_interfaces::srv::MoveCartesian::Request> request,
                             std::shared_ptr<aprs_interfaces::srv::MoveCartesian::Response> response);
+  void move_to_pose_(const std::shared_ptr<aprs_interfaces::srv::MoveToPose::Request> request,
+                            std::shared_ptr<aprs_interfaces::srv::MoveToPose::Response> response);
 
   // Sensor CBs
   void advanced_logical_camera_cb(const ariac_msgs::msg::AdvancedLogicalCameraImage::ConstSharedPtr msg);

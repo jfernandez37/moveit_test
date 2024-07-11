@@ -4,6 +4,7 @@ RobotCommander::RobotCommander(rclcpp::NodeOptions node_options, moveit::plannin
  : Node(robot_name + "_robot_commander", "", node_options),
   arm_planning_interface_(std::shared_ptr<rclcpp::Node>(std::move(this)), moveit_options, std::shared_ptr<tf2_ros::Buffer>(), rclcpp::Duration::from_seconds(5))
 {
+  RCLCPP_INFO(this->get_logger(), "\n\n\n\n\n\nCREATING ROBOTCOMMANDER\n\n\n\n\n\n");
   // Use upper joint velocity and acceleration limits
   arm_planning_interface_.setMaxAccelerationScalingFactor(1.0);
   arm_planning_interface_.setMaxVelocityScalingFactor(1.0);
@@ -32,6 +33,12 @@ RobotCommander::RobotCommander(rclcpp::NodeOptions node_options, moveit::plannin
     std::bind(
       &RobotCommander::move_cartesian_, this,
       std::placeholders::_1, std::placeholders::_2));
+  
+  move_to_pose_srv_ = create_service<aprs_interfaces::srv::MoveToPose>(
+    "/" + robot_name + "_move_to_pose",
+    std::bind(
+      &RobotCommander::move_to_pose_, this,
+      std::placeholders::_1, std::placeholders::_2));
 
   // Advanced logical camera subscription
   advanced_logical_camera_sub_ = this->create_subscription<ariac_msgs::msg::AdvancedLogicalCameraImage>(
@@ -40,6 +47,7 @@ RobotCommander::RobotCommander(rclcpp::NodeOptions node_options, moveit::plannin
   );
 
   robot_name_ = robot_name;
+  
 }
 
 RobotCommander::~RobotCommander() 
@@ -129,12 +137,21 @@ void RobotCommander::move_cartesian_(
   const std::shared_ptr<aprs_interfaces::srv::MoveCartesian::Request> request,
   std::shared_ptr<aprs_interfaces::srv::MoveCartesian::Response> response
 ){
+  RCLCPP_INFO(this->get_logger(), "Inside move_cartesian cb");
   std::vector<geometry_msgs::msg::Pose> waypoints;
   for(auto pose : request->poses){
     waypoints.push_back(pose);
   }
 
   response->success = MoveRobotCartesian(waypoints, request->asf, request->vsf, request->avoid_collisions);
+}
+
+void RobotCommander::move_to_pose_(
+  const std::shared_ptr<aprs_interfaces::srv::MoveToPose::Request> request,
+  std::shared_ptr<aprs_interfaces::srv::MoveToPose::Response> response
+){
+  RCLCPP_INFO(get_logger(), "INSIDE move to pose cb");
+  response->success = MoveRobotToPose(request->pose);
 }
 
 bool RobotCommander::MoveRobotCartesian(
@@ -157,6 +174,15 @@ bool RobotCommander::MoveRobotCartesian(
   rt.getRobotTrajectoryMsg(trajectory);
 
   return static_cast<bool>(arm_planning_interface_.execute(trajectory));
+}
+
+bool RobotCommander::MoveRobotToPose(geometry_msgs::msg::Pose target_pose){
+  arm_planning_interface_.setPoseTarget(target_pose);
+
+  moveit::planning_interface::MoveGroupInterface::Plan plan;
+
+  arm_planning_interface_.plan(plan);
+  arm_planning_interface_.move();
 }
 
 geometry_msgs::msg::Pose RobotCommander::MultiplyPose(
