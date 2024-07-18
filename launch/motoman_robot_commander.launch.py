@@ -29,55 +29,41 @@ def generate_launch_description():
     all_params = {}
     all_params[f"motoman_robot_commander"] = {"ros__parameters" : {}}
     # Robot Commander Node
-    urdf = os.path.join(get_package_share_directory("aprs_description"), f"urdf/aprs_motoman.urdf.xacro")
+    urdf = os.path.join(get_package_share_directory("motoman_description"), f"urdf/motoman.urdf.xacro")
             
     moveit_config = (
-        MoveItConfigsBuilder(f"aprs_motoman", package_name=f"aprs_motoman_moveit_config")
+        MoveItConfigsBuilder("motoman", package_name="motoman_moveit_config")
         .robot_description(file_path=urdf)
-        .robot_description_semantic(file_path=f"config/aprs_motoman.srdf")
+        .robot_description_semantic(file_path="config/motoman.srdf")
         .trajectory_execution(file_path="config/controllers.yaml")
         .planning_pipelines(pipelines=["ompl"])
-        .joint_limits(file_path="config/joint_limits.yaml")
-        .moveit_cpp(
-            file_path=get_package_share_directory(f"aprs_motoman_moveit_config")
-            + "/config/moveitpy_config.yaml"
-        )
         .to_moveit_configs()
     )
     
     parameters_dict = moveit_config.to_dict()
     parameters_dict["use_sim_time"] = True
     
-    for k,v in parameters_dict.items():
-        all_params[f"motoman_robot_commander"]["ros__parameters"][k] = v
-    
-    move_group = Node(
+    move_group_node = Node(
         package="moveit_ros_move_group",
         executable="move_group",
-        namespace="motoman",
         output="screen",
         remappings=[
-            ('/joint_states','joint_states')             
+            ("/ctrl_groups/r1/joint_states", "joint_states")
         ],
         parameters=[
-            parameters_dict
+            moveit_config.to_dict(),
+            {"use_sim_time": True}
         ],
-    )
+    )   
         
-    with tempfile.NamedTemporaryFile(delete=False) as tmp:
-        temp_param_file = tmp.name
-        print(temp_param_file)
-        params_string = yaml.dump(all_params,sort_keys=False,Dumper=NoAliasDumper)
-        tmp.write(bytes(params_string, 'utf-8'))
     
     robot_commander_node = Node(
             package="moveit_test",
             executable="motoman_robot_commander_node",
-            output="screen",
-            arguments=[temp_param_file]
+            output="screen"
         )
 
     return LaunchDescription([
         robot_commander_node,
-        move_group
+        move_group_node
         ])

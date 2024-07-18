@@ -1,8 +1,8 @@
 #include <robot_commander/robot_commander.hpp>
 
-RobotCommander::RobotCommander(rclcpp::NodeOptions node_options, moveit::planning_interface::MoveGroupInterface::Options moveit_options, std::string robot_name)
- : Node(robot_name + "_robot_commander", "", node_options),
-  arm_planning_interface_(std::shared_ptr<rclcpp::Node>(std::move(this)), moveit_options, std::shared_ptr<tf2_ros::Buffer>(), rclcpp::Duration::from_seconds(5))
+RobotCommander::RobotCommander(std::string robot_name)
+ : Node(robot_name + "_robot_commander"),
+  arm_planning_interface_(std::shared_ptr<rclcpp::Node>(std::move(this)), "motoman_arm")
 {
   RCLCPP_INFO(this->get_logger(), "\n\n\n\n\n\nCREATING ROBOTCOMMANDER\n\n\n\n\n\n");
   // Use upper joint velocity and acceleration limits
@@ -21,12 +21,6 @@ RobotCommander::RobotCommander(rclcpp::NodeOptions node_options, moveit::plannin
     std::bind(
       &RobotCommander::ArmMoveTestState, this,
       std::placeholders::_1, std::placeholders::_2));
-
-  pick_part_srv_ = create_service<aprs_interfaces::srv::PickPart>(
-    "/" + robot_name + "_pick_part",
-    std::bind(
-      &RobotCommander::pick_part_, this,
-      std::placeholders::_1, std::placeholders::_2));
   
   move_cartesian_srv_ = create_service<aprs_interfaces::srv::MoveCartesian>(
     "/" + robot_name + "_move_cartesian",
@@ -40,11 +34,17 @@ RobotCommander::RobotCommander(rclcpp::NodeOptions node_options, moveit::plannin
       &RobotCommander::move_to_pose_, this,
       std::placeholders::_1, std::placeholders::_2));
 
-  // Advanced logical camera subscription
-  advanced_logical_camera_sub_ = this->create_subscription<ariac_msgs::msg::AdvancedLogicalCameraImage>(
-    "/advanced_logical_camera_ros_topic", rclcpp::SensorDataQoS(),
-    std::bind(&RobotCommander::advanced_logical_camera_cb, this, std::placeholders::_1)
-  );
+  move_up_srv_ = create_service<std_srvs::srv::Trigger>(
+    "/move_" + robot_name + "_up",
+    std::bind(
+      &RobotCommander::MoveUp, this,
+      std::placeholders::_1, std::placeholders::_2));
+  
+  move_down_srv_ = create_service<std_srvs::srv::Trigger>(
+    "/move_" + robot_name + "_down",
+    std::bind(
+      &RobotCommander::MoveDown, this,
+      std::placeholders::_1, std::placeholders::_2));
 
   robot_name_ = robot_name;
   
@@ -53,16 +53,6 @@ RobotCommander::RobotCommander(rclcpp::NodeOptions node_options, moveit::plannin
 RobotCommander::~RobotCommander() 
 {
   arm_planning_interface_.~MoveGroupInterface();
-}
-
-void RobotCommander::advanced_logical_camera_cb(const ariac_msgs::msg::AdvancedLogicalCameraImage::ConstSharedPtr msg){
-  if(!alc_recieved_data){
-    RCLCPP_DEBUG(get_logger(), "Received data from advanced logical camera");
-    alc_recieved_data = true;
-  }
-
-  env_parts_ = msg->part_poses;
-  advanced_logical_camera_pose_ = msg->sensor_pose;
 }
 
 void RobotCommander::ArmMoveHome(
@@ -110,27 +100,6 @@ void RobotCommander::ArmMoveTestState(
     res->message = "Unable to generate trajectory";
     res->success = false;
   }
-}
-
-void RobotCommander::pick_part_(
-  const std::shared_ptr<aprs_interfaces::srv::PickPart::Request> request,
-  std::shared_ptr<aprs_interfaces::srv::PickPart::Response> response
-){
-  geometry_msgs::msg::Pose part_pose = request->pose;
-  ariac_msgs::msg::Part part_to_pick = request->part;
-
-  double part_rotation = GetYaw(part_pose);
-
-  std::vector<geometry_msgs::msg::Pose> waypoints;
-  waypoints.push_back(BuildPose(part_pose.position.x, part_pose.position.y,
-                                part_pose.position.z + 0.5, SetRobotOrientation(part_rotation)));
-  
-  waypoints.push_back(BuildPose(part_pose.position.x, part_pose.position.y,
-                                part_pose.position.z + part_heights_[part_to_pick.type] + pick_offset_, SetRobotOrientation(part_rotation)));
-
-  MoveRobotCartesian(waypoints, 0.75, 0.75, true);
-
-  response->success = true;
 }
 
 void RobotCommander::move_cartesian_(
@@ -183,6 +152,7 @@ bool RobotCommander::MoveRobotToPose(geometry_msgs::msg::Pose target_pose){
 
   arm_planning_interface_.plan(plan);
   arm_planning_interface_.move();
+  return true;
 }
 
 geometry_msgs::msg::Pose RobotCommander::MultiplyPose(
@@ -229,6 +199,38 @@ geometry_msgs::msg::Quaternion RobotCommander::SetRobotOrientation(double rotati
   q.w = tf_q.w();
 
   return q;
+}
+
+void RobotCommander::MoveUp(
+  std_srvs::srv::Trigger::Request::SharedPtr req,
+  std_srvs::srv::Trigger::Response::SharedPtr res)
+{
+  (void)req;
+  (void)res;
+  geometry_msgs::msg::PoseStamped initial_ee_pose = arm_planning_interface_.getCurrentPose();
+
+  geometry_msgs::msg::Pose target_pose = BuildPose(initial_ee_pose.pose.position.x, initial_ee_pose.pose.position.x, initial_ee_pose.pose.position.z - 0.01,
+                                                   initial_ee_pose.pose.orientation);
+
+ std::vector<geometry_msgs::msg::Pose> waypoints = {target_pose};
+
+ MoveRobotCartesian(waypoints, 0.3, 0.3, true); 
+}
+  
+void RobotCommander::MoveDown(
+  std_srvs::srv::Trigger::Request::SharedPtr req,
+  std_srvs::srv::Trigger::Response::SharedPtr res)
+{
+  (void)req;
+  (void)res;
+  geometry_msgs::msg::PoseStamped initial_ee_pose = arm_planning_interface_.getCurrentPose();
+
+  geometry_msgs::msg::Pose target_pose = BuildPose(initial_ee_pose.pose.position.x, initial_ee_pose.pose.position.x, initial_ee_pose.pose.position.z - 0.01,
+                                                   initial_ee_pose.pose.orientation);
+
+ std::vector<geometry_msgs::msg::Pose> waypoints = {target_pose};
+
+ MoveRobotCartesian(waypoints, 0.3, 0.3, true); 
 }
 
 // int main(int argc, char *argv[]){

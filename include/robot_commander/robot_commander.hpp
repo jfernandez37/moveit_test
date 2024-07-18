@@ -6,12 +6,9 @@
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
 
-#include <aprs_interfaces/srv/pick_part.hpp>
 #include <aprs_interfaces/srv/move_cartesian.hpp>
 #include <aprs_interfaces/srv/move_to_pose.hpp>
 
-
-#include <ariac_msgs/msg/advanced_logical_camera_image.hpp>
 
 #include <geometry_msgs/msg/pose.hpp>
 
@@ -24,7 +21,7 @@
 class RobotCommander : public rclcpp::Node
 {
 public:
-  RobotCommander(rclcpp::NodeOptions, moveit::planning_interface::MoveGroupInterface::Options, std::string);
+  RobotCommander(std::string);
   ~RobotCommander();
 
 private:
@@ -34,12 +31,12 @@ private:
   // ROS Services
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr arm_move_home_srv_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr arm_move_test_state_srv_;
-  rclcpp::Service<aprs_interfaces::srv::PickPart>::SharedPtr pick_part_srv_;
   rclcpp::Service<aprs_interfaces::srv::MoveCartesian>::SharedPtr move_cartesian_srv_;
   rclcpp::Service<aprs_interfaces::srv::MoveToPose>::SharedPtr move_to_pose_srv_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr move_up_srv_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr move_down_srv_;
 
   // Subscriptions
-  rclcpp::Subscription<ariac_msgs::msg::AdvancedLogicalCameraImage>::SharedPtr advanced_logical_camera_sub_;
   
   // Sensor poses
   geometry_msgs::msg::Pose advanced_logical_camera_pose_;
@@ -52,28 +49,25 @@ private:
   void ArmMoveTestState(
     std_srvs::srv::Trigger::Request::SharedPtr req,
     std_srvs::srv::Trigger::Response::SharedPtr res);
+
+  void MoveUp(
+    std_srvs::srv::Trigger::Request::SharedPtr req,
+    std_srvs::srv::Trigger::Response::SharedPtr res);
+  
+  void MoveDown(
+    std_srvs::srv::Trigger::Request::SharedPtr req,
+    std_srvs::srv::Trigger::Response::SharedPtr res);
   
   // Competitor CBs
-  void pick_part_(const std::shared_ptr<aprs_interfaces::srv::PickPart::Request> request,
-                            std::shared_ptr<aprs_interfaces::srv::PickPart::Response> response);
   void move_cartesian_(const std::shared_ptr<aprs_interfaces::srv::MoveCartesian::Request> request,
                             std::shared_ptr<aprs_interfaces::srv::MoveCartesian::Response> response);
   void move_to_pose_(const std::shared_ptr<aprs_interfaces::srv::MoveToPose::Request> request,
                             std::shared_ptr<aprs_interfaces::srv::MoveToPose::Response> response);
 
-  // Sensor CBs
-  void advanced_logical_camera_cb(const ariac_msgs::msg::AdvancedLogicalCameraImage::ConstSharedPtr msg);
 
-  // Data from sensors
-  std::vector<ariac_msgs::msg::PartPose> env_parts_;
   
   // Misc. variables
   bool alc_recieved_data = false;
-  std::map<int, double> part_heights_ = {
-      {ariac_msgs::msg::Part::BATTERY, 0.04},
-      {ariac_msgs::msg::Part::PUMP, 0.12},
-      {ariac_msgs::msg::Part::REGULATOR, 0.07},
-      {ariac_msgs::msg::Part::SENSOR, 0.07}};
   double pick_offset_ = 0.003;
   trajectory_processing::TimeOptimalTrajectoryGeneration totg_;
   std::string robot_name_;
