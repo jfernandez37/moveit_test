@@ -26,8 +26,6 @@ class NoAliasDumper(yaml.SafeDumper):
         return True
 
 def generate_launch_description():
-    move_groups = []
-    robot_commanders = []
     # Robot Commander Node
     urdf = os.path.join(get_package_share_directory("motoman_description"), "urdf/motoman.urdf.xacro")
         
@@ -41,28 +39,25 @@ def generate_launch_description():
     )
     
     parameters_dict = moveit_config.to_dict()
-    parameters_dict["use_sim_time"] = True
-    
-    move_groups.append(Node(
+    parameters_dict["publish_robot_description_semantic"] = True
+        
+    move_group = Node(
         package="moveit_ros_move_group",
         executable="move_group",
         output="screen",
-        remappings=[
-            ('/joint_states','joint_states')             
-        ],
         parameters=[
             parameters_dict
         ],
-    ))
+    )
     
-    robot_commanders.append(Node(
+    robot_commander = Node(
             package="moveit_test",
             executable=f"motoman_robot_commander_node",
             output="screen",
             parameters=[
                 parameters_dict
             ]
-        ))
+        )
 
     individual_competition_node = Node(
         package="moveit_test",
@@ -71,7 +66,7 @@ def generate_launch_description():
     )
     
     return LaunchDescription([
-        *robot_commanders,
-        *move_groups,
+        robot_commander,
+        move_group,
         # individual_competition_node
         ])

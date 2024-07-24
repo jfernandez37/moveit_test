@@ -41,18 +41,13 @@ def generate_launch_description():
     )
     
     parameters_dict = moveit_config.to_dict()
-    parameters_dict["use_sim_time"] = True
     
     move_group_node = Node(
         package="moveit_ros_move_group",
         executable="move_group",
         output="screen",
-        remappings=[
-            ("/ctrl_groups/r1/joint_states", "joint_states")
-        ],
         parameters=[
-            moveit_config.to_dict(),
-            {"use_sim_time": True}
+            moveit_config.to_dict()
         ],
     )   
         
