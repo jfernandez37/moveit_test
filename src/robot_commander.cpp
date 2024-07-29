@@ -1,10 +1,9 @@
 #include <robot_commander/robot_commander.hpp>
 
-RobotCommander::RobotCommander(std::string robot_name)
- : Node(robot_name + "_robot_commander"),
-  arm_planning_interface_(std::shared_ptr<rclcpp::Node>(std::move(this)), "motoman_arm")
+RobotCommander::RobotCommander(rclcpp::NodeOptions node_options, moveit::planning_interface::MoveGroupInterface::Options moveit_options, std::string robot_name)
+ : Node(robot_name + "_robot_commander", "", node_options),
+  arm_planning_interface_(std::shared_ptr<rclcpp::Node>(std::move(this)), moveit_options, std::shared_ptr<tf2_ros::Buffer>(), rclcpp::Duration::from_seconds(5))
 {
-  RCLCPP_INFO(this->get_logger(), "\n\n\n\n\n\nCREATING ROBOTCOMMANDER\n\n\n\n\n\n");
   // Use upper joint velocity and acceleration limits
   arm_planning_interface_.setMaxAccelerationScalingFactor(1.0);
   arm_planning_interface_.setMaxVelocityScalingFactor(1.0);
@@ -47,7 +46,7 @@ RobotCommander::RobotCommander(std::string robot_name)
       std::placeholders::_1, std::placeholders::_2));
 
   robot_name_ = robot_name;
-  
+  std::cout << "End of robot commander constructor" << std::endl;
 }
 
 RobotCommander::~RobotCommander() 
@@ -207,14 +206,16 @@ void RobotCommander::MoveUp(
 {
   (void)req;
   (void)res;
+  arm_planning_interface_.startStateMonitor(10);
   geometry_msgs::msg::PoseStamped initial_ee_pose = arm_planning_interface_.getCurrentPose();
 
-  geometry_msgs::msg::Pose target_pose = BuildPose(initial_ee_pose.pose.position.x, initial_ee_pose.pose.position.x, initial_ee_pose.pose.position.z - 0.01,
+  RCLCPP_INFO(get_logger(), "INSIDE MOVEUP");
+  geometry_msgs::msg::Pose target_pose = BuildPose(initial_ee_pose.pose.position.x, initial_ee_pose.pose.position.x, initial_ee_pose.pose.position.z + 0.01,
                                                    initial_ee_pose.pose.orientation);
 
- std::vector<geometry_msgs::msg::Pose> waypoints = {target_pose};
+  std::vector<geometry_msgs::msg::Pose> waypoints = {target_pose};
 
- MoveRobotCartesian(waypoints, 0.3, 0.3, true); 
+  MoveRobotCartesian(waypoints, 0.3, 0.3, true); 
 }
   
 void RobotCommander::MoveDown(

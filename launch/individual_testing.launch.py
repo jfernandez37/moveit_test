@@ -33,7 +33,7 @@ def generate_launch_description():
         MoveItConfigsBuilder("motoman", package_name="motoman_moveit_config")
         .robot_description(file_path=urdf)
         .robot_description_semantic(file_path="config/motoman.srdf")
-        .trajectory_execution(file_path="config/controllers.yaml")
+        .trajectory_execution(file_path="config/moveit_controllers.yaml")
         .planning_pipelines(pipelines=["ompl"])
         .to_moveit_configs()
     )

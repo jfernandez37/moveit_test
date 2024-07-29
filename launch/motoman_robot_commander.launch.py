@@ -26,8 +26,6 @@ class NoAliasDumper(yaml.SafeDumper):
         return True
 
 def generate_launch_description():
-    all_params = {}
-    all_params[f"motoman_robot_commander"] = {"ros__parameters" : {}}
     # Robot Commander Node
     urdf = os.path.join(get_package_share_directory("motoman_description"), f"urdf/motoman.urdf.xacro")
             
@@ -35,27 +33,41 @@ def generate_launch_description():
         MoveItConfigsBuilder("motoman", package_name="motoman_moveit_config")
         .robot_description(file_path=urdf)
         .robot_description_semantic(file_path="config/motoman.srdf")
-        .trajectory_execution(file_path="config/controllers.yaml")
+        .trajectory_execution(file_path="config/moveit_controllers.yaml")
         .planning_pipelines(pipelines=["ompl"])
         .to_moveit_configs()
-    )
+    )    
     
-    parameters_dict = moveit_config.to_dict()
+    params = moveit_config.to_dict()
+    params["publish_robot_description_semantic"] = True
+    
+    params["kinematics_solver"] = "kdl_kinematics_plugin/KDLKinematicsPlugin"
+    params["kinematics_solver_search_resolution"] = 0.005
+    params["Kinematics_solver_timeout"] = 0.005
     
     move_group_node = Node(
         package="moveit_ros_move_group",
         executable="move_group",
         output="screen",
         parameters=[
-            moveit_config.to_dict()
-        ],
+            params
+        ]
     )   
-        
+    
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        temp_param_file = tmp.name
+        print(temp_param_file)
+        params_string = yaml.dump(params,sort_keys=False,Dumper=NoAliasDumper)
+        tmp.write(bytes(params_string, 'utf-8'))
     
     robot_commander_node = Node(
             package="moveit_test",
             executable="motoman_robot_commander_node",
-            output="screen"
+            output="screen",
+            parameters=[
+                params
+            ],
+            arguments=[temp_param_file]
         )
 
     return LaunchDescription([

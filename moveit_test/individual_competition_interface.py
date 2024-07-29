@@ -41,9 +41,6 @@ class CompetitionInterface(Node):
     
     def __init__(self):
         super().__init__('competition_interface')
-
-        self.camera_parts = []
-        self.camera_pose = Pose()
         
         self.move_cartesian_clients_ = {robot:self.create_client(MoveCartesian, f"/{robot}_move_cartesian") for robot in self._robot_world_coords.keys()}
         self.move_robot_to_pose_clients_ = {robot:self.create_client(MoveToPose, f"/{robot}_move_to_pose") for robot in self._robot_world_coords.keys()}

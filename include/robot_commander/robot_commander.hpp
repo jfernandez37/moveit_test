@@ -21,7 +21,7 @@
 class RobotCommander : public rclcpp::Node
 {
 public:
-  RobotCommander(std::string);
+  RobotCommander(rclcpp::NodeOptions, moveit::planning_interface::MoveGroupInterface::Options, std::string);
   ~RobotCommander();
 
 private:
@@ -39,7 +39,6 @@ private:
   // Subscriptions
   
   // Sensor poses
-  geometry_msgs::msg::Pose advanced_logical_camera_pose_;
 
   // Service Callbacks
   void ArmMoveHome(
