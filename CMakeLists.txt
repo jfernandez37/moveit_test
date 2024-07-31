@@ -10,6 +10,8 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   moveit_ros_planning_interface
   aprs_interfaces
   tf2_kdl
+  motoros2_interfaces
+  control_msgs
 )
 
 find_package(ament_cmake REQUIRED)
