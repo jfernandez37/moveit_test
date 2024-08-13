@@ -69,8 +69,15 @@ def generate_launch_description():
             ],
             arguments=[temp_param_file]
         )
+    
+    executor_node = Node(
+        package="moveit_test",
+        executable="execution_node.py",
+        output="screen"
+    )
 
     return LaunchDescription([
         robot_commander_node,
-        move_group_node
+        move_group_node,
+        executor_node
         ])

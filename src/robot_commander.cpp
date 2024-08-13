@@ -13,6 +13,8 @@ RobotCommander::RobotCommander()
 
   trajectory_pub_ = this->create_publisher<trajectory_msgs::msg::JointTrajectory>("/trajectories", 10);
 
+  joint_states_sub_ = this->create_subscription<sensor_msgs::msg::JointState>("/joint_states", 10, std::bind(&RobotCommander::joint_states_cb, this, std::placeholders::_1));
+
   // Register services
   // arm_move_home_srv_ = create_service<std_srvs::srv::Trigger>(
   //   "/move_" + robot_name + "_arm_home", 
@@ -57,6 +59,10 @@ RobotCommander::RobotCommander()
 RobotCommander::~RobotCommander() 
 {
   planning_interface_.~MoveGroupInterface();
+}
+
+void RobotCommander::joint_states_cb(const sensor_msgs::msg::JointState::SharedPtr msg){
+  most_recent_joint_positions_ = msg->position;
 }
 
 bool RobotCommander::StartTrajectoryMode()
@@ -179,21 +185,21 @@ bool RobotCommander::MoveRobotCartesian(
   // Retime trajectory
   robot_trajectory::RobotTrajectory rt(planning_interface_.getCurrentState()->getRobotModel(), "motoman_arm");
   rt.setRobotTrajectoryMsg(*planning_interface_.getCurrentState(), trajectory);
-  totg_.computeTimeStamps(rt, vsf, asf);
+  // totg_.computeTimeStamps(rt, vsf, asf);
   rt.getRobotTrajectoryMsg(trajectory);
 
   return execute_trajectory(trajectory);
 }
 
-// bool RobotCommander::MoveRobotToPose(geometry_msgs::msg::Pose target_pose){
-//   planning_interface_.setPoseTarget(target_pose);
+bool RobotCommander::MoveRobotToPose(geometry_msgs::msg::Pose target_pose){
+  planning_interface_.setPoseTarget(target_pose);
 
-//   moveit::planning_interface::MoveGroupInterface::Plan plan;
+  moveit::planning_interface::MoveGroupInterface::Plan plan;
 
-//   planning_interface_.plan(plan);
-//   planning_interface_.move();
-//   return true;
-// }
+  planning_interface_.plan(plan);
+  planning_interface_.move();
+  return true;
+}
 
 // geometry_msgs::msg::Pose RobotCommander::MultiplyPose(
 //   geometry_msgs::msg::Pose p1, geometry_msgs::msg::Pose p2
@@ -290,11 +296,113 @@ geometry_msgs::msg::Pose RobotCommander::BuildPose(
 
 bool RobotCommander::execute_trajectory(moveit_msgs::msg::RobotTrajectory trajectory){
   control_msgs::action::FollowJointTrajectory::Goal goal_msg;
+
+  RCLCPP_INFO(get_logger(), "Inside execute trajectory");
+
+  trajectory_msgs::msg::JointTrajectoryPoint start;
+
+  start.positions = most_recent_joint_positions_;
+  start.velocities = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+  trajectory.joint_trajectory.points[0] = start;
+  // trajectory.joint_trajectory.points.insert(trajectory.joint_trajectory.points.begin(), start);
+  
+  // trajectory_msgs::msg::JointTrajectory target_trajectory = add_current_state_to_trajectory(trajectory.joint_trajectory);
   goal_msg.trajectory = trajectory.joint_trajectory;
+
+  RCLCPP_INFO(get_logger(), "Built new trajectory");
 
   trajectory_pub_->publish(trajectory.joint_trajectory);
 
-  auto goal_handle_future = follow_joint_trajectory_client_->async_send_goal(goal_msg);
-  goal_handle_future.wait();
+  // auto send_goal_options = rclcpp_action::Client<control_msgs::action::FollowJointTrajectory>::SendGoalOptions();
+  // // send_goal_options.result_callback = std::bind(&RobotCommander::result_callback, this, std::placeholders::_1);
+
+  // auto future = follow_joint_trajectory_client_->async_send_goal(goal_msg, send_goal_options);
+  // RCLCPP_INFO(get_logger(), "Before wait");
+  // if (!future.get()) {
+  //   RCLCPP_ERROR(this->get_logger(), "Goal was rejected by server");
+  // } else {
+  //   RCLCPP_INFO(this->get_logger(), "Goal accepted by server, waiting for result");
+  // }
+  // future.wait();
+
+  // while(result.get()->get_status()!=action_msgs::msg::GoalStatus::STATUS_SUCCEEDED){
+  //   RCLCPP_INFO_STREAM(get_logger(),result.get()->get_status()); 
+  // }
+  // while(future.get()->get_status() == action_msgs::msg::GoalStatus::STATUS_ACCEPTED);
+  // RCLCPP_INFO(get_logger(), "After wait");
+  // switch(future.get()->get_status()){
+  //   case action_msgs::msg::GoalStatus::STATUS_SUCCEEDED:
+  //     RCLCPP_INFO(get_logger(), "Trajectory executed successfully");
+  //     // return true;.get().get()->get_status()
+  //     break;
+  //   case action_msgs::msg::GoalStatus::STATUS_ABORTED:
+  //     RCLCPP_ERROR(get_logger(), "Trajectory execution aborted");
+  //     // return false;
+  //     break;
+  //   case action_msgs::msg::GoalStatus::STATUS_CANCELED:
+  //     RCLCPP_ERROR(get_logger(), "Trajectory execution canceled");
+  //     // return false;
+  //     break;
+  //   case action_msgs::msg::GoalStatus::STATUS_CANCELING:
+  //     RCLCPP_ERROR(get_logger(), "Trajectory execution canceling");
+  //     // return false;
+  //     break;
+  //   case action_msgs::msg::GoalStatus::STATUS_ACCEPTED:
+  //     RCLCPP_ERROR(get_logger(), "Trajectory execution accepted");
+  //     // return false;
+  //     break;
+  //   case action_msgs::msg::GoalStatus::STATUS_EXECUTING:
+  //     RCLCPP_ERROR(get_logger(), "Trajectory execution executing");
+  //     // return false;
+  //     break;
+  //   case action_msgs::msg::GoalStatus::STATUS_UNKNOWN:
+  //     RCLCPP_ERROR(get_logger(), "Trajectory execution failed (unknown status)");
+  //     // return false;
+  //     break;
+  //   default:
+  //     RCLCPP_ERROR(get_logger(), "ERROR: Unknown trajectory status");
+  //     // return false;
+  //     break;
+  // }
+  // future.wait();
   return true;
 }
+
+// trajectory_msgs::msg::JointTrajectory RobotCommander::add_current_state_to_trajectory(
+//   trajectory_msgs::msg::JointTrajectory old_trajectory
+// ){
+//   RCLCPP_INFO(get_logger(), "Building new trajectory");
+//   trajectory_msgs::msg::JointTrajectory new_trajectory;
+//   new_trajectory.header = old_trajectory.header;
+//   new_trajectory.joint_names = old_trajectory.joint_names;
+
+//   trajectory_msgs::msg::JointTrajectoryPoint new_point;
+//   new_point.velocities = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+//   new_point.positions = most_recent_joint_positions_;
+//   new_point.time_from_start = rclcpp::Duration(0, 0);
+
+//   new_trajectory.points.push_back(new_point);
+//   for (auto point : old_trajectory.points){
+//     new_trajectory.points.push_back(point);
+//   }
+//   return new_trajectory;
+// }
+
+// void RobotCommander::result_callback(rclcpp_action::ClientGoalHandle<control_msgs::action::FollowJointTrajectory>::WrappedResult & result)
+//   {
+//     // RCLCPP_INFO_STREAM(get_logger(), result.error_string);
+//     switch (result.code) {
+//       case rclcpp_action::ResultCode::SUCCEEDED:
+//         break;
+//       case rclcpp_action::ResultCode::ABORTED:
+//         RCLCPP_ERROR(this->get_logger(), "Goal was aborted");
+//         return;
+//       case rclcpp_action::ResultCode::CANCELED:
+//         RCLCPP_ERROR(this->get_logger(), "Goal was canceled");
+//         return;
+//       default:
+//         RCLCPP_ERROR(this->get_logger(), "Unknown result code");
+//         return;
+//     }
+//   }

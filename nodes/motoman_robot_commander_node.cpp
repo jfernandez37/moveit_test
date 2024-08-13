@@ -30,28 +30,39 @@ int main(int argc, char *argv[])
   geometry_msgs::msg::Pose target_pose = motoman_commander->BuildPose(
     initial_ee_pose.pose.position.x, 
     initial_ee_pose.pose.position.y,
-    initial_ee_pose.pose.position.z - 0.01,
+    initial_ee_pose.pose.position.z - 0.05,
     initial_ee_pose.pose.orientation
   );
 
   motoman_commander->planning_interface_.setStartStateToCurrentState();
+  motoman_commander->planning_interface_.setNamedTarget("home");
 
-  std::vector<geometry_msgs::msg::Pose> waypoints;
-  waypoints.push_back(target_pose);
+  moveit::planning_interface::MoveGroupInterface::Plan plan;
+  bool success = static_cast<bool>(motoman_commander->planning_interface_.plan(plan));
 
-  motoman_commander->MoveRobotCartesian(waypoints, 0.1, 0.1, true);
+  if (success)
+  {
+    static_cast<bool>(motoman_commander->planning_interface_.execute(plan));
+  }
+  else
+  {
+    RCLCPP_ERROR(motoman_commander->get_logger(), "Unable to generate plan");
+    return -1;
+  }
 
-  sleep(5);
+  // motoman_commander->planning_interface_.setStartStateToCurrentState();
 
-  waypoints.clear();
-  waypoints.push_back(initial_ee_pose.pose);
-  motoman_commander->MoveRobotCartesian(waypoints, 0.1, 0.1, true);
+  // motoman_commander->MoveRobotToPose(target_pose);
+
+  // sleep(5);
+
+  // motoman_commander->MoveRobotToPose(initial_ee_pose.pose);
 
   // RCLCPP_INFO(motoman_commander->get_logger(), "Movement finished");
 
   // sleep(2);
 
-  // motoman_commander->StopTrajectoryMode();
+  motoman_commander->StopTrajectoryMode();
 
   // RCLCPP_INFO(motoman_commander->get_logger(), "After stop trajectory mode");
 

@@ -11,6 +11,9 @@
 #include <aprs_interfaces/srv/move_to_pose.hpp>
 
 #include <control_msgs/action/follow_joint_trajectory.hpp>
+#include <action_msgs/msg/goal_status.hpp>
+#include <sensor_msgs/msg/joint_state.hpp>
+#include <trajectory_msgs/msg/joint_trajectory_point.hpp>
 
 #include <geometry_msgs/msg/pose.hpp>
 
@@ -38,13 +41,23 @@ public:
   bool StartTrajectoryMode();
   bool StopTrajectoryMode();
   bool execute_trajectory(moveit_msgs::msg::RobotTrajectory);
+  bool MoveRobotToPose(geometry_msgs::msg::Pose);
 
 private:
 
   rclcpp_action::Client<control_msgs::action::FollowJointTrajectory>::SharedPtr follow_joint_trajectory_client_;
 
   rclcpp::Publisher<trajectory_msgs::msg::JointTrajectory>::SharedPtr trajectory_pub_;
+
+  rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_states_sub_;
+
+  std::vector<double> most_recent_joint_positions_;
   
+  trajectory_msgs::msg::JointTrajectory add_current_state_to_trajectory(trajectory_msgs::msg::JointTrajectory);
+
+  void joint_states_cb(const sensor_msgs::msg::JointState::SharedPtr);
+
+  void result_callback(rclcpp_action::ClientGoalHandle<control_msgs::action::FollowJointTrajectory>::WrappedResult &);
   // MoveIt Interfaces 
   // moveit::planning_interface::MoveGroupInterface planning_interface_;
 
@@ -91,6 +104,7 @@ private:
   // bool alc_recieved_data = false;
   // double pick_offset_ = 0.003;
   trajectory_processing::TimeOptimalTrajectoryGeneration totg_;
+  
   // std::string robot_name_;
 
   // // Utility functions
@@ -103,3 +117,4 @@ private:
   // bool MoveRobotCartesian(std::vector<geometry_msgs::msg::Pose>, double, double, bool);
   // bool MoveRobotToPose(geometry_msgs::msg::Pose);
 };
+
