@@ -183,6 +183,7 @@ bool RobotCommander::MoveRobotToPose(geometry_msgs::msg::Pose target_pose){
 
   arm_planning_interface_.plan(plan);
   arm_planning_interface_.move();
+  return true;
 }
 
 geometry_msgs::msg::Pose RobotCommander::MultiplyPose(

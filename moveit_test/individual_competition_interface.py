@@ -95,19 +95,19 @@ class CompetitionInterface(Node):
             return False
         self.log_("Part located. Z value = "+str(part_pose.position.z))
         
-        pose = Pose()
-        pose = part_pose
-        pose.position.z = pose.position.z+0.25
+        # pose = Pose()
+        # pose = part_pose
+        # pose.position.z = pose.position.z+0.25
         
-        request = MoveToPose.Request()
-        request.pose = pose
+        # request = MoveToPose.Request()
+        # request.pose = pose
         
-        future = self.move_robot_to_pose_clients_[closest_robot_to_part].call_async(request)
+        # future = self.move_robot_to_pose_clients_[closest_robot_to_part].call_async(request)
         
-        rclpy.spin_until_future_complete(self, future, timeout_sec=150)
+        # rclpy.spin_until_future_complete(self, future, timeout_sec=150)
 
-        if not future.done():
-            raise Error("Timeout reached when calling move to pose service")
+        # if not future.done():
+        #     raise Error("Timeout reached when calling move to pose service")
         
         # request = MoveCartesian.Request()
         # request.poses = [pose]
@@ -122,16 +122,16 @@ class CompetitionInterface(Node):
         # if not future.done():
         #     raise Error("Timeout reached when calling move cartesian service")
         
-        # request = PickPart.Request()
-        # request.part = part_to_pick
-        # request.pose = part_pose
+        request = PickPart.Request()
+        request.part = part_to_pick
+        request.pose = part_pose
         
-        # future = self.pick_part_clients_[closest_robot_to_part].call_async(request)
+        future = self.pick_part_clients_[closest_robot_to_part].call_async(request)
 
-        # rclpy.spin_until_future_complete(self, future, timeout_sec=150)
+        rclpy.spin_until_future_complete(self, future, timeout_sec=150)
 
-        # if not future.done():
-        #     raise Error("Timeout reached when calling pick part service")
+        if not future.done():
+            raise Error("Timeout reached when calling pick part service")
         
         
     def log_(self, msg: str):

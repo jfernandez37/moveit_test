@@ -19,12 +19,13 @@ def main(args=None):
     part_to_pick = Part()
     part_to_pick.type = Part.BATTERY
     part_to_pick.color = Part.BLUE
-    sleep(10)
     interface.pick_part(part_to_pick)
-    part_to_pick = Part()
-    part_to_pick.type = Part.REGULATOR
-    part_to_pick.color = Part.GREEN
-    interface.pick_part(part_to_pick)
+    # sleep(10)
+    # interface.pick_part(part_to_pick)
+    # part_to_pick = Part()
+    # part_to_pick.type = Part.REGULATOR
+    # part_to_pick.color = Part.GREEN
+    # interface.pick_part(part_to_pick)
     
     interface.enable_conveyor(True)
     interface.set_conveyor_state(1, 0.5)
