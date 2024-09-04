@@ -16,12 +16,12 @@ def main(args=None):
     spin_thread = threading.Thread(target=executor.spin)
     spin_thread.start()
     sleep(10)
-    # part_to_pick = Part()
-    # part_to_pick.type = Part.BATTERY
-    # part_to_pick.color = Part.BLUE
-    # interface.pick_part(part_to_pick)
-    # sleep(10)
-    # interface.pick_part(part_to_pick)
+    part_to_pick = Part()
+    part_to_pick.type = Part.BATTERY
+    part_to_pick.color = Part.BLUE
+    interface.pick_part(part_to_pick)
+    sleep(10)
+    interface.pick_part(part_to_pick)
     part_to_pick = Part()
     part_to_pick.type = Part.REGULATOR
     part_to_pick.color = Part.GREEN
