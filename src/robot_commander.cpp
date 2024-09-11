@@ -122,13 +122,13 @@ void RobotCommander::pick_part_(
   double part_rotation = GetYaw(part_pose);
 
   std::vector<geometry_msgs::msg::Pose> waypoints;
-  waypoints.push_back(BuildPose(part_pose.position.x, part_pose.position.y,
-                                part_pose.position.z + 0.5, SetRobotOrientation(part_rotation)));
+  // waypoints.push_back(BuildPose(part_pose.position.x, part_pose.position.y,
+  //                               part_pose.position.z + 0.5, SetRobotOrientation(part_rotation)));
   
   waypoints.push_back(BuildPose(part_pose.position.x, part_pose.position.y,
                                 part_pose.position.z + part_heights_[part_to_pick.type] + pick_offset_, SetRobotOrientation(part_rotation)));
 
-  MoveRobotCartesian(waypoints, 0.75, 0.75, true);
+  MoveRobotCartesian(waypoints, 0.75, 0.75, false);
 
   response->success = true;
 }

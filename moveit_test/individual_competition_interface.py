@@ -95,9 +95,9 @@ class CompetitionInterface(Node):
             return False
         self.log_("Part located. Z value = "+str(part_pose.position.z))
         
-        # pose = Pose()
-        # pose = part_pose
-        # pose.position.z = pose.position.z+0.25
+        pose = Pose()
+        pose = part_pose
+        pose.position.z = pose.position.z+0.25
         
         # request = MoveToPose.Request()
         # request.pose = pose
@@ -111,22 +111,31 @@ class CompetitionInterface(Node):
         
         # request = MoveCartesian.Request()
         # request.poses = [pose]
-        # request.asf = 0.3
-        # request.vsf = 0.3
-        # request.avoid_collisions = False
+        # request.asf = 0.75
+        # request.vsf = 0.75
+        # request.avoid_collisions = True
         
-        # future = self.move_cartesian_clients_[closest_robot_to_part].call_async(request)
+        # future = self.move_cartesian_clients_["motoman"].call_async(request)
+        # future_2 = self.move_cartesian_clients_["fanuc"].call_async(request)
         
         # rclpy.spin_until_future_complete(self, future, timeout_sec=150)
+        # rclpy.spin_until_future_complete(self, future_2, timeout_sec=150)
 
-        # if not future.done():
+        # if not future.done() or not future_2.done():
         #     raise Error("Timeout reached when calling move cartesian service")
         
         request = PickPart.Request()
         request.part = part_to_pick
         request.pose = part_pose
         
-        future = self.pick_part_clients_[closest_robot_to_part].call_async(request)
+        future = self.pick_part_clients_["motoman"].call_async(request)
+
+        rclpy.spin_until_future_complete(self, future, timeout_sec=150)
+
+        if not future.done():
+            raise Error("Timeout reached when calling pick part service")
+        
+        future = self.pick_part_clients_["fanuc"].call_async(request)
 
         rclpy.spin_until_future_complete(self, future, timeout_sec=150)
 
