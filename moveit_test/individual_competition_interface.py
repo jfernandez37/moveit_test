@@ -1,12 +1,8 @@
-from moveit.planning import MoveItPy
 import rclpy
 from rclpy.node import Node
-from rclpy.parameter import Parameter
-from rclpy.time import Duration, Time
 from rclpy.qos import qos_profile_sensor_data
 
 import math
-import time
 
 from aprs_interfaces.srv import PickPart, MoveCartesian, MoveToPose
 
