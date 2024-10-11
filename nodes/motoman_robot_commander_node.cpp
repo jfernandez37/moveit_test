@@ -37,5 +37,11 @@ int main(int argc, char *argv[])
   executor.add_node(motoman_commander);
 
   executor.spin();
+
+  std::cout << "Before sleep and move up call" << std::endl;
+
+  sleep(5);
+  motoman_commander->MoveUp();
+  
   rclcpp::shutdown();
 }

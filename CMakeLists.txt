@@ -30,7 +30,6 @@ ament_python_install_package(${PROJECT_NAME} SCRIPTS_DESTINATION lib/${PROJECT_N
 
 # Install Python executables
 install(PROGRAMS
-  nodes/cpp_test.py
   nodes/individual_competition_node.py
 
   DESTINATION lib/${PROJECT_NAME}

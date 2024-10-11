@@ -8,42 +8,7 @@ RobotCommander::RobotCommander(rclcpp::NodeOptions node_options, moveit::plannin
   arm_planning_interface_.setMaxAccelerationScalingFactor(1.0);
   arm_planning_interface_.setMaxVelocityScalingFactor(1.0);
 
-  // Register services
-  arm_move_home_srv_ = create_service<std_srvs::srv::Trigger>(
-    "/move_" + robot_name + "_arm_home", 
-    std::bind(
-      &RobotCommander::ArmMoveHome, this,
-      std::placeholders::_1, std::placeholders::_2));
-  
-  arm_move_test_state_srv_ = create_service<std_srvs::srv::Trigger>(
-    "/move_" + robot_name + "_arm_test_state", 
-    std::bind(
-      &RobotCommander::ArmMoveTestState, this,
-      std::placeholders::_1, std::placeholders::_2));
-  
-  move_cartesian_srv_ = create_service<aprs_interfaces::srv::MoveCartesian>(
-    "/" + robot_name + "_move_cartesian",
-    std::bind(
-      &RobotCommander::move_cartesian_, this,
-      std::placeholders::_1, std::placeholders::_2));
-  
-  move_to_pose_srv_ = create_service<aprs_interfaces::srv::MoveToPose>(
-    "/" + robot_name + "_move_to_pose",
-    std::bind(
-      &RobotCommander::move_to_pose_, this,
-      std::placeholders::_1, std::placeholders::_2));
-
-  move_up_srv_ = create_service<std_srvs::srv::Trigger>(
-    "/move_" + robot_name + "_up",
-    std::bind(
-      &RobotCommander::MoveUp, this,
-      std::placeholders::_1, std::placeholders::_2));
-  
-  move_down_srv_ = create_service<std_srvs::srv::Trigger>(
-    "/move_" + robot_name + "_down",
-    std::bind(
-      &RobotCommander::MoveDown, this,
-      std::placeholders::_1, std::placeholders::_2));
+  position_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("/forward_position_controller/commands", 10);
 
   robot_name_ = robot_name;
   std::cout << "End of robot commander constructor" << std::endl;
@@ -52,74 +17,6 @@ RobotCommander::RobotCommander(rclcpp::NodeOptions node_options, moveit::plannin
 RobotCommander::~RobotCommander() 
 {
   arm_planning_interface_.~MoveGroupInterface();
-}
-
-void RobotCommander::ArmMoveHome(
-  std_srvs::srv::Trigger::Request::SharedPtr req,
-  std_srvs::srv::Trigger::Response::SharedPtr res)
-{
-  RCLCPP_INFO(get_logger(), "Called service");
-  (void)req; // remove unused parameter warning
-  arm_planning_interface_.setNamedTarget("home");
-
-  moveit::planning_interface::MoveGroupInterface::Plan plan;
-  bool success = static_cast<bool>(arm_planning_interface_.plan(plan));
-
-  if (success) {
-    if (static_cast<bool>(arm_planning_interface_.execute(plan))) {
-      res->success = true;
-    } else {
-      res->success = false;
-      res->message = "Trajectory execution failed";
-    }
-  } else {
-    res->message = "Unable to generate trajectory";
-    res->success = false;
-  }
-}
-
-void RobotCommander::ArmMoveTestState(
-  std_srvs::srv::Trigger::Request::SharedPtr req,
-  std_srvs::srv::Trigger::Response::SharedPtr res)
-{
-  (void)req; // remove unused parameter warning
-  arm_planning_interface_.setNamedTarget("test_state");
-
-  moveit::planning_interface::MoveGroupInterface::Plan plan;
-  bool success = static_cast<bool>(arm_planning_interface_.plan(plan));
-
-  if (success) {
-    if (static_cast<bool>(arm_planning_interface_.execute(plan))) {
-      res->success = true;
-    } else {
-      res->success = false;
-      res->message = "Trajectory execution failed";
-    }
-  } else {
-    res->message = "Unable to generate trajectory";
-    res->success = false;
-  }
-}
-
-void RobotCommander::move_cartesian_(
-  const std::shared_ptr<aprs_interfaces::srv::MoveCartesian::Request> request,
-  std::shared_ptr<aprs_interfaces::srv::MoveCartesian::Response> response
-){
-  RCLCPP_INFO(this->get_logger(), "Inside move_cartesian cb");
-  std::vector<geometry_msgs::msg::Pose> waypoints;
-  for(auto pose : request->poses){
-    waypoints.push_back(pose);
-  }
-
-  response->success = MoveRobotCartesian(waypoints, request->asf, request->vsf, request->avoid_collisions);
-}
-
-void RobotCommander::move_to_pose_(
-  const std::shared_ptr<aprs_interfaces::srv::MoveToPose::Request> request,
-  std::shared_ptr<aprs_interfaces::srv::MoveToPose::Response> response
-){
-  RCLCPP_INFO(get_logger(), "INSIDE move to pose cb");
-  response->success = MoveRobotToPose(request->pose);
 }
 
 bool RobotCommander::MoveRobotCartesian(
@@ -141,16 +38,16 @@ bool RobotCommander::MoveRobotCartesian(
   totg_.computeTimeStamps(rt, vsf, asf);
   rt.getRobotTrajectoryMsg(trajectory);
 
-  return static_cast<bool>(arm_planning_interface_.execute(trajectory));
-}
+  std_msgs::msg::Float64MultiArray target_position;
+  std::vector<double> pos(10,0);
+  for(auto point : trajectory.joint_trajectory.points){
+    for(int i = 0; i < 7; i++){
+      pos[i] = point.positions[i];
+    }
+    target_position.data = pos;
+    position_publisher_->publish(target_position);
+  }
 
-bool RobotCommander::MoveRobotToPose(geometry_msgs::msg::Pose target_pose){
-  arm_planning_interface_.setPoseTarget(target_pose);
-
-  moveit::planning_interface::MoveGroupInterface::Plan plan;
-
-  arm_planning_interface_.plan(plan);
-  arm_planning_interface_.move();
   return true;
 }
 
@@ -200,12 +97,8 @@ geometry_msgs::msg::Quaternion RobotCommander::SetRobotOrientation(double rotati
   return q;
 }
 
-void RobotCommander::MoveUp(
-  std_srvs::srv::Trigger::Request::SharedPtr req,
-  std_srvs::srv::Trigger::Response::SharedPtr res)
+void RobotCommander::MoveUp()
 {
-  (void)req;
-  (void)res;
   arm_planning_interface_.startStateMonitor(10);
   geometry_msgs::msg::PoseStamped initial_ee_pose = arm_planning_interface_.getCurrentPose();
 
@@ -216,22 +109,6 @@ void RobotCommander::MoveUp(
   std::vector<geometry_msgs::msg::Pose> waypoints = {target_pose};
 
   MoveRobotCartesian(waypoints, 0.3, 0.3, true); 
-}
-  
-void RobotCommander::MoveDown(
-  std_srvs::srv::Trigger::Request::SharedPtr req,
-  std_srvs::srv::Trigger::Response::SharedPtr res)
-{
-  (void)req;
-  (void)res;
-  geometry_msgs::msg::PoseStamped initial_ee_pose = arm_planning_interface_.getCurrentPose();
-
-  geometry_msgs::msg::Pose target_pose = BuildPose(initial_ee_pose.pose.position.x, initial_ee_pose.pose.position.x, initial_ee_pose.pose.position.z - 0.01,
-                                                   initial_ee_pose.pose.orientation);
-
- std::vector<geometry_msgs::msg::Pose> waypoints = {target_pose};
-
- MoveRobotCartesian(waypoints, 0.3, 0.3, true); 
 }
 
 // int main(int argc, char *argv[]){

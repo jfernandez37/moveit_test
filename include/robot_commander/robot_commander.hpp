@@ -2,13 +2,11 @@
 
 #include <std_srvs/srv/trigger.hpp>
 
+#include <std_msgs/msg/float64_multi_array.hpp>
+
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
-
-#include <aprs_interfaces/srv/move_cartesian.hpp>
-#include <aprs_interfaces/srv/move_to_pose.hpp>
-
 
 #include <geometry_msgs/msg/pose.hpp>
 
@@ -24,47 +22,15 @@ public:
   RobotCommander(rclcpp::NodeOptions, moveit::planning_interface::MoveGroupInterface::Options, std::string);
   ~RobotCommander();
 
+  void MoveUp();
+
 private:
   // MoveIt Interfaces 
   moveit::planning_interface::MoveGroupInterface arm_planning_interface_;
 
-  // ROS Services
-  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr arm_move_home_srv_;
-  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr arm_move_test_state_srv_;
-  rclcpp::Service<aprs_interfaces::srv::MoveCartesian>::SharedPtr move_cartesian_srv_;
-  rclcpp::Service<aprs_interfaces::srv::MoveToPose>::SharedPtr move_to_pose_srv_;
-  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr move_up_srv_;
-  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr move_down_srv_;
+  // Publishers
+  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr position_publisher_;
 
-  // Subscriptions
-  
-  // Sensor poses
-
-  // Service Callbacks
-  void ArmMoveHome(
-    std_srvs::srv::Trigger::Request::SharedPtr req,
-    std_srvs::srv::Trigger::Response::SharedPtr res);
-
-  void ArmMoveTestState(
-    std_srvs::srv::Trigger::Request::SharedPtr req,
-    std_srvs::srv::Trigger::Response::SharedPtr res);
-
-  void MoveUp(
-    std_srvs::srv::Trigger::Request::SharedPtr req,
-    std_srvs::srv::Trigger::Response::SharedPtr res);
-  
-  void MoveDown(
-    std_srvs::srv::Trigger::Request::SharedPtr req,
-    std_srvs::srv::Trigger::Response::SharedPtr res);
-  
-  // Competitor CBs
-  void move_cartesian_(const std::shared_ptr<aprs_interfaces::srv::MoveCartesian::Request> request,
-                            std::shared_ptr<aprs_interfaces::srv::MoveCartesian::Response> response);
-  void move_to_pose_(const std::shared_ptr<aprs_interfaces::srv::MoveToPose::Request> request,
-                            std::shared_ptr<aprs_interfaces::srv::MoveToPose::Response> response);
-
-
-  
   // Misc. variables
   bool alc_recieved_data = false;
   double pick_offset_ = 0.003;
@@ -79,5 +45,4 @@ private:
 
   // Robot control functions
   bool MoveRobotCartesian(std::vector<geometry_msgs::msg::Pose>, double, double, bool);
-  bool MoveRobotToPose(geometry_msgs::msg::Pose);
 };
